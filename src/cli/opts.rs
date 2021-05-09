@@ -104,6 +104,7 @@ pub enum Command {
     Ls,
 
     /// Terminate children of farcasterd
+    #[cfg(feature = "integration_test")]
     Pedicide,
 
     /// Maker creates offer and start listening. Command used to to print a hex

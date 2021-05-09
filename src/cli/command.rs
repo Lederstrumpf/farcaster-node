@@ -70,6 +70,7 @@ impl Exec for Command {
                 runtime.report_response()?;
             }
 
+            #[cfg(feature = "integration_test")]
             Command::Pedicide => {
                 runtime.request(ServiceId::Farcasterd, Request::Pedicide)?;
                 runtime.report_response()?;

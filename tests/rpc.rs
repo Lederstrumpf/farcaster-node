@@ -1,4 +1,5 @@
-// #![cfg(feature = "integration_test")]
+#![cfg(feature = "integration_test")]
+
 #[macro_use]
 extern crate log;
 

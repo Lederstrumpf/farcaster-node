@@ -880,6 +880,7 @@ impl Runtime {
                 }
             }
 
+            #[cfg(feature = "integration_test")]
             Request::Pedicide => {
                 let res = self.pedicide();
                 if res.values().any(|result| result.is_err()) {
@@ -993,6 +994,7 @@ impl Runtime {
         Ok(msg)
     }
 
+    #[cfg(feature = "integration_test")]
     pub fn pedicide(&mut self) -> HashMap<u32, io::Result<()>> {
         self.child_processes
             .iter_mut()
