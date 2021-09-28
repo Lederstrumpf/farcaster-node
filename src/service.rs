@@ -20,11 +20,11 @@ use std::str::FromStr;
 use bitcoin::hashes::hex::{self, ToHex};
 use internet2::{zmqsocket, NodeAddr, ZmqType};
 // use lnp::{TempChannelId as TempSwapId};
-use strict_encoding::{strict_deserialize, strict_serialize};
-use strict_encoding::{StrictDecode, StrictEncode};
 #[cfg(feature = "node")]
 use microservices::node::TryService;
 use microservices::{esb, rpc};
+use strict_encoding::{strict_deserialize, strict_serialize};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use farcaster_core::swap::SwapId;
 

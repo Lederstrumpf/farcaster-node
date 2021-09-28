@@ -13,8 +13,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use clap::{AppSettings, Clap};
-use strict_encoding::{StrictDecode, StrictEncode};
 use std::str::FromStr;
+use strict_encoding::{StrictDecode, StrictEncode};
 
 /// Syncer blockchain management daemon; part of Farcaster Node
 ///

@@ -58,11 +58,11 @@ use internet2::Api;
 use internet2::{NodeAddr, RemoteSocketAddr};
 use lnp::payment::{self, AssetsBalance, Lifecycle};
 use lnp::{message, Messages, TempChannelId as TempSwapId};
+use microservices::rpc::Failure;
+use microservices::rpc_connection;
 use strict_encoding::{
     strategies::HashFixedBytes, strict_encode_list, Strategy, StrictDecode, StrictEncode,
 };
-use microservices::rpc::Failure;
-use microservices::rpc_connection;
 
 #[derive(Clone, Debug, Display, From, StrictDecode, StrictEncode, Api)]
 #[api(encoding = "lightning")]
