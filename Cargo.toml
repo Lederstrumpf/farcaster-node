@@ -89,8 +89,10 @@ zmq = "0.9"
 # Async
 tokio = { version = "1.9.0", features = ["full"] }
 # Coin clients
-electrum-client = { git = "https://github.com/TheCharlatan/rust-electrum-client", branch = "verboseTransactionGet" }
-bitcoincore-rpc = "0.13.0"
+# electrum-client = { git = "https://github.com/TheCharlatan/rust-electrum-client", branch = "verboseTransactionGet" }
+# electrum-client = "0.8.0"
+electrum-client = { path = "../rust-electrum-client" }
+bitcoincore-rpc = "0.14.0"
 monero-rpc = { git = "https://github.com/TheCharlatan/monero-rpc-rs", branch = "changes" }
 # monero-rpc = { path = "../monero-rpc-rs/" }
 
@@ -125,14 +127,16 @@ clap_generate = "3.0.0-beta.4"
 log = { version = "0.4", features = ["max_level_trace", "release_max_level_debug"] }
 shellexpand = "2"
 configure_me_codegen = "0.4"
-electrum-client = { git = "https://github.com/TheCharlatan/rust-electrum-client", branch = "verboseTransactionGet" }
+# electrum-client = { git = "https://github.com/TheCharlatan/rust-electrum-client", branch = "verboseTransactionGet" }
+# electrum-client = "0.8.0"
+electrum-client = { path = "../rust-electrum-client" }
 
 [dependencies.microservices]
 # path = '../ext/rust-internet2'
 # git = 'https://github.com/zkao/rust-internet2.git'
 # branch = 'farcaster'
 name = "rust-internet2"
-version = "0.5.0-alpha.2"
+version = "0.5.0-alpha.1"
 default-features = false
 features = ['peer']
 
@@ -141,7 +145,7 @@ features = ['peer']
 # git = 'https://github.com/zkao/rust-internet2.git'
 # branch = 'farcaster'
 name = "rust-internet2"
-version = "0.5.0-alpha.2"
+version = "0.5.0-alpha.1"
 default-features = false
 features = ['peer']
 
