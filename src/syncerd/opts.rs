@@ -13,7 +13,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use clap::{AppSettings, Clap};
-use lnpbp::strict_encoding::{StrictDecode, StrictEncode};
+use strict_encoding::{StrictDecode, StrictEncode};
 use std::str::FromStr;
 
 /// Syncer blockchain management daemon; part of Farcaster Node
@@ -40,7 +40,6 @@ pub struct Opts {
 }
 
 #[derive(Clap, Clone, Hash, PartialEq, Eq, Debug, StrictEncode, StrictDecode)]
-#[strict_encoding_crate(lnpbp::strict_encoding)]
 pub enum Coin {
     /// Launches a bitcoin syncer
     Bitcoin,
