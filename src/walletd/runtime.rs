@@ -33,8 +33,8 @@ use farcaster_core::{
     },
     blockchain::FeePriority,
     bundle::{
-        AliceParameters, BobParameters, CoreArbitratingTransactions, FullySignedBuy,
-        FullySignedPunish, FullySignedRefund, FundingTransaction, SignedAdaptorBuy,
+        AliceParameters, AliceProof, BobParameters, BobProof, CoreArbitratingTransactions,
+        FullySignedBuy, FullySignedPunish, FullySignedRefund, FundingTransaction, SignedAdaptorBuy,
         SignedAdaptorRefund, SignedArbitratingLock,
     },
     crypto::{ArbitratingKeyId, GenerateKey},
@@ -89,10 +89,12 @@ pub enum Wallet {
     Alice(
         Alice<BtcXmr>,
         AliceParameters<BtcXmr>,
+        AliceProof<BtcXmr>,
         KeyManager,
         PublicOffer<BtcXmr>,
         Option<CommitBobParameters<BtcXmr>>,
         Option<BobParameters<BtcXmr>>,
+        Option<BobProof<BtcXmr>>,
         Option<CoreArbitratingSetup<BtcXmr>>,
         Option<Signature>,
     ),
@@ -146,11 +148,13 @@ pub struct BobState {
     wallet_ix: u32,
     bob: Bob<BtcXmr>,
     local_params: BobParameters<BtcXmr>,
+    local_proof: BobProof<BtcXmr>,
     key_manager: KeyManager,
     pub_offer: PublicOffer<BtcXmr>,
     funding_tx: Option<FundingTx>,
     remote_commit: Option<CommitAliceParameters<BtcXmr>>,
     remote_params: Option<AliceParameters<BtcXmr>>,
+    remote_proof: Option<AliceProof<BtcXmr>>,
     core_arb_setup: Option<CoreArbitratingSetup<BtcXmr>>,
     adaptor_buy: Option<SignedAdaptorBuy<Bitcoin<SegwitV0>>>,
 }
@@ -160,6 +164,7 @@ impl BobState {
         wallet_ix: u32,
         bob: Bob<BtcXmr>,
         local_params: BobParameters<BtcXmr>,
+        local_proof: BobProof<BtcXmr>,
         key_manager: KeyManager,
         pub_offer: PublicOffer<BtcXmr>,
         funding_tx: Option<FundingTx>,
@@ -169,11 +174,13 @@ impl BobState {
             wallet_ix,
             bob,
             local_params,
+            local_proof,
             key_manager,
             pub_offer,
             funding_tx,
             remote_commit,
             remote_params: None,
+            remote_proof: None,
             core_arb_setup: None,
             adaptor_buy: None,
         }
@@ -272,7 +279,8 @@ impl Runtime {
                         let wallet_index = self.wallet_counter.increment();
                         let mut key_manager =
                             KeyManager::new(self.node_secrets.wallet_seed, wallet_index)?;
-                        let local_params = bob.generate_parameters(&mut key_manager, &pub_offer)?;
+                        let (local_params, local_proof) =
+                            bob.generate_parameters(&mut key_manager, &pub_offer)?;
                         if self.wallets.get(&swap_id).is_none() {
                             let funding = create_funding(&mut key_manager)?;
                             let funding_addr = funding.get_address()?;
@@ -286,6 +294,7 @@ impl Runtime {
                                     wallet_index,
                                     bob,
                                     local_params.clone(),
+                                    local_proof,
                                     key_manager,
                                     pub_offer.clone(),
                                     Some(funding),
@@ -321,7 +330,8 @@ impl Runtime {
                         let wallet_seed = self.node_secrets.wallet_seed;
                         let wallet_index = self.wallet_counter.increment();
                         let mut key_manager = KeyManager::new(wallet_seed, wallet_index)?;
-                        let params = alice.generate_parameters(&mut key_manager, &pub_offer)?;
+                        let (params, proof) =
+                            alice.generate_parameters(&mut key_manager, &pub_offer)?;
                         if self.wallets.get(&swap_id).is_none() {
                             info!("Creating {}", "Wallet::Alice".bright_yellow());
                             if let request::Commit::Bob(bob_commit) = remote_commit.clone() {
@@ -330,9 +340,11 @@ impl Runtime {
                                     Wallet::Alice(
                                         alice,
                                         params.clone(),
+                                        proof,
                                         key_manager,
                                         pub_offer.clone(),
                                         Some(bob_commit),
+                                        None,
                                         None,
                                         None,
                                         None,
@@ -373,10 +385,12 @@ impl Runtime {
                         if let Some(Wallet::Alice(
                             _alice,
                             _alice_params,
+                            _alice_proof,
                             key_manager,
                             _public_offer,
                             bob_commit, // None
                             bob_params, // None
+                            bob_proof,
                             _core_arb_txs,
                             alice_cancel_sig, // None
                         )) = self.wallets.get_mut(&swap_id)
@@ -419,10 +433,12 @@ impl Runtime {
                         if let Some(Wallet::Alice(
                             _alice,
                             _alice_params,
+                            _alice_proof,
                             key_manager,
                             _public_offer,
                             Some(bob_commit),
-                            bob_params, // None
+                            bob_params,      // None
+                            Some(bob_proof), // Should be Some() at this stage
                             _core_arb_txs,
                             alice_cancel_sig,
                         )) = self.wallets.get_mut(&swap_id)
@@ -437,7 +453,8 @@ impl Runtime {
                                 let proof_verification = key_manager.verify_proof(
                                     &remote_params_candidate.spend,
                                     &remote_params_candidate.adaptor,
-                                    remote_params_candidate.proof.clone(),
+                                    bob_proof.proof.clone(), /* remote_params_candidate.proof.
+                                                              * clone(), */
                                 );
 
                                 if !proof_verification.is_ok() {
@@ -463,8 +480,9 @@ impl Runtime {
                             key_manager,
                             pub_offer,
                             funding_tx: Some(funding_tx),
-                            remote_params,  // Nome
-                            core_arb_setup, // None
+                            remote_params,                    // None
+                            remote_proof: Some(remote_proof), // None
+                            core_arb_setup,                   // None
                             ..
                         })) = self.wallets.get_mut(&swap_id)
                         {
@@ -479,7 +497,7 @@ impl Runtime {
                             let proof_verification = key_manager.verify_proof(
                                 &remote_params_candidate.spend,
                                 &remote_params_candidate.adaptor,
-                                remote_params_candidate.proof.clone(),
+                                remote_proof.proof.clone(),
                             );
 
                             if !proof_verification.is_ok() {
@@ -643,10 +661,12 @@ impl Runtime {
                 if let Some(Wallet::Alice(
                     alice,
                     alice_params,
+                    alice_proof,
                     key_manager,
                     public_offer,
                     _bob_commit,
                     Some(bob_parameters),
+                    Some(bob_proof),
                     core_arb_setup,   // None
                     alice_cancel_sig, // None
                 )) = self.wallets.get_mut(&swap_id)
@@ -735,10 +755,12 @@ impl Runtime {
                 if let Some(Wallet::Alice(
                     alice,
                     alice_params,
+                    alice_proof,
                     key_manager,
                     public_offer,
                     _bob_commit,
                     Some(bob_parameters),
+                    Some(bob_proof),
                     Some(core_arb_setup),
                     Some(alice_cancel_sig),
                 )) = self.wallets.get_mut(&swap_id)
@@ -856,7 +878,7 @@ impl Runtime {
                 match taker_role {
                     SwapRole::Bob => {
                         let bob: Bob<BtcXmr> = Bob::new(external_address.into(), FeePriority::Low);
-                        let local_params =
+                        let (local_params, local_proof) =
                             bob.generate_parameters(&mut key_manager, &public_offer)?;
                         let funding = create_funding(&mut key_manager)?;
                         let funding_addr = funding.get_address()?;
@@ -873,6 +895,7 @@ impl Runtime {
                                 self.wallet_counter.increment(),
                                 bob,
                                 local_params.clone(),
+                                local_proof.clone(),
                                 key_manager,
                                 public_offer.clone(),
                                 Some(funding),
@@ -902,7 +925,7 @@ impl Runtime {
                     SwapRole::Alice => {
                         let alice: Alice<BtcXmr> =
                             Alice::new(external_address.into(), FeePriority::Low);
-                        let local_params =
+                        let (local_params, local_proof) =
                             alice.generate_parameters(&mut key_manager, &public_offer)?;
                         let wallet_seed = self.node_secrets.wallet_seed;
                         let wallet_index = self.wallet_counter.increment();
@@ -917,8 +940,10 @@ impl Runtime {
                                 Wallet::Alice(
                                     alice,
                                     local_params.clone(),
+                                    local_proof.clone(),
                                     key_manager,
                                     public_offer.clone(),
+                                    None,
                                     None,
                                     None,
                                     None,

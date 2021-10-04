@@ -40,7 +40,7 @@ required-features = ["server"]
 [dependencies]
 # Farcaster crates
 # farcaster_core = { path = "../farcaster-core", features = ["serde"] }
-farcaster_core = { git = "https://github.com/farcaster-project/farcaster-core", branch = "main", features = ["serde"] }
+farcaster_core = { git = "https://github.com/Lederstrumpf/farcaster-core", branch = "split_out_dleq_proof_from_parameters", features = ["serde"] }
 
 hex = "^0.4.3"
 
@@ -93,7 +93,7 @@ monero-rpc = { git = "https://github.com/Lederstrumpf/monero-rpc-rs", branch = "
 
 [build-dependencies]
 # farcaster_core = { path = "../farcaster-core", features = ["serde"]}
-farcaster_core = { git = "https://github.com/farcaster-project/farcaster-core", branch = "main", features = ["serde"] }
+farcaster_core = { git = "https://github.com/Lederstrumpf/farcaster-core", branch = "split_out_dleq_proof_from_parameters", features = ["serde"] }
 
 serde_yaml = { version = "0.8", optional = true }
 toml = { version = "0.5", optional = true }
