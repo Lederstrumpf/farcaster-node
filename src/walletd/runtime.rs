@@ -33,8 +33,8 @@ use farcaster_core::{
     },
     blockchain::FeePriority,
     bundle::{
-        AliceParameters, AliceProof, BobParameters, BobProof, CoreArbitratingTransactions,
-        FullySignedBuy, FullySignedPunish, FullySignedRefund, FundingTransaction, SignedAdaptorBuy,
+        AliceParameters, BobParameters, CoreArbitratingTransactions, FullySignedBuy,
+        FullySignedPunish, FullySignedRefund, FundingTransaction, Proof, SignedAdaptorBuy,
         SignedAdaptorRefund, SignedArbitratingLock,
     },
     crypto::{ArbitratingKeyId, GenerateKey},
@@ -42,8 +42,8 @@ use farcaster_core::{
     monero::Monero,
     negotiation::PublicOffer,
     protocol_message::{
-        BuyProcedureSignature, CommitAliceParameters, CommitAliceProof, CommitBobParameters,
-        CommitBobProof, CoreArbitratingSetup, RefundProcedureSignatures,
+        BuyProcedureSignature, CommitAliceParameters, CommitBobParameters, CommitProof,
+        CoreArbitratingSetup, RefundProcedureSignatures,
     },
     role::{Alice, Bob, SwapRole, TradeRole},
     swap::btcxmr::{BtcXmr, KeyManager},
@@ -89,13 +89,12 @@ pub enum Wallet {
     Alice(
         Alice<BtcXmr>,
         AliceParameters<BtcXmr>,
-        AliceProof<BtcXmr>,
+        Proof<BtcXmr>,
         KeyManager,
         PublicOffer<BtcXmr>,
         Option<CommitBobParameters<BtcXmr>>,
         Option<BobParameters<BtcXmr>>,
-        Option<CommitBobParameters<BtcXmr>>,
-        Option<BobProof<BtcXmr>>,
+        Option<Proof<BtcXmr>>,
         Option<CoreArbitratingSetup<BtcXmr>>,
         Option<Signature>,
     ),
@@ -114,10 +113,12 @@ struct AliceWallet {
     wallet_ix: u32,
     alice: Alice<BtcXmr>,
     local_params: AliceParameters<BtcXmr>,
+    local_proof: Proof<BtcXmr>,
     key_manager: KeyManager,
     pub_offer: PublicOffer<BtcXmr>,
     remote_commit: Option<CommitBobParameters<BtcXmr>>,
     remote_params: Option<BobParameters<BtcXmr>>,
+    remote_proof: Option<Proof<BtcXmr>>,
     core_arb_setup: Option<CoreArbitratingSetup<BtcXmr>>,
     signature: Option<Signature>,
 }
@@ -127,6 +128,7 @@ impl AliceWallet {
         wallet_ix: u32,
         alice: Alice<BtcXmr>,
         local_params: AliceParameters<BtcXmr>,
+        local_proof: Proof<BtcXmr>,
         key_manager: KeyManager,
         pub_offer: PublicOffer<BtcXmr>,
         remote_commit: Option<CommitBobParameters<BtcXmr>>,
@@ -135,10 +137,12 @@ impl AliceWallet {
             wallet_ix,
             alice,
             local_params,
+            local_proof,
             key_manager,
             pub_offer,
             remote_commit,
             remote_params: None,
+            remote_proof: None,
             core_arb_setup: None,
             signature: None,
         }
@@ -149,14 +153,14 @@ pub struct BobState {
     wallet_ix: u32,
     bob: Bob<BtcXmr>,
     local_params: BobParameters<BtcXmr>,
-    local_proof: BobProof<BtcXmr>,
+    local_proof: Proof<BtcXmr>,
     key_manager: KeyManager,
     pub_offer: PublicOffer<BtcXmr>,
     funding_tx: Option<FundingTx>,
     remote_commit_params: Option<CommitAliceParameters<BtcXmr>>,
     remote_params: Option<AliceParameters<BtcXmr>>,
-    remote_commit_proof: Option<CommitAliceProof<BtcXmr>>,
-    remote_proof: Option<AliceProof<BtcXmr>>,
+    remote_commit_proof: Option<CommitProof<BtcXmr>>,
+    remote_proof: Option<Proof<BtcXmr>>,
     core_arb_setup: Option<CoreArbitratingSetup<BtcXmr>>,
     adaptor_buy: Option<SignedAdaptorBuy<Bitcoin<SegwitV0>>>,
 }
@@ -166,7 +170,7 @@ impl BobState {
         wallet_ix: u32,
         bob: Bob<BtcXmr>,
         local_params: BobParameters<BtcXmr>,
-        local_proof: BobProof<BtcXmr>,
+        local_proof: Proof<BtcXmr>,
         key_manager: KeyManager,
         pub_offer: PublicOffer<BtcXmr>,
         funding_tx: Option<FundingTx>,
@@ -299,7 +303,7 @@ impl Runtime {
                                     wallet_index,
                                     bob,
                                     local_params.clone(),
-                                    local_proof,
+                                    local_proof.clone(),
                                     key_manager,
                                     pub_offer.clone(),
                                     Some(funding),
@@ -315,6 +319,7 @@ impl Runtime {
                                 local_trade_role: TradeRole::Maker,
                                 public_offer: pub_offer,
                                 local_params: Params::Bob(local_params.clone()),
+                                local_proof,
                                 swap_id,
                                 remote_commit: Some(remote_commit),
                                 funding_address: Some(funding_addr),
@@ -347,11 +352,10 @@ impl Runtime {
                                     Wallet::Alice(
                                         alice,
                                         params.clone(),
-                                        proof,
+                                        proof.clone(),
                                         key_manager,
                                         pub_offer.clone(),
                                         Some(bob_commit),
-                                        None,
                                         None,
                                         None,
                                         None,
@@ -364,6 +368,7 @@ impl Runtime {
                                     local_trade_role: TradeRole::Maker,
                                     public_offer: pub_offer,
                                     local_params: Params::Alice(params),
+                                    local_proof: proof,
                                     swap_id,
                                     remote_commit: Some(remote_commit),
                                     funding_address: None,
@@ -397,8 +402,7 @@ impl Runtime {
                             _key_manager,
                             _public_offer,
                             bob_commit_params, // None
-                            _bob_params, // None
-                            _bob_commit_proof,
+                            _bob_params,       // None
                             _bob_proof,
                             _core_arb_txs,
                             alice_cancel_sig, // None
@@ -432,10 +436,7 @@ impl Runtime {
                             return Ok(());
                         }
                     }
-                    Commit::BobProof(CommitBobProof { swap_id, .. }) => {
-                        todo!()
-                    }
-                    Commit::AliceProof(CommitAliceProof { swap_id, .. }) => {
+                    Commit::Proof(CommitProof { swap_id, .. }) => {
                         todo!()
                     }
                 }
@@ -453,7 +454,6 @@ impl Runtime {
                             _public_offer,
                             Some(bob_commit),
                             bob_params,      // None
-                            Some(bob_commit_proof), // Should be Some() at this stage
                             Some(bob_proof), // Should be Some() at this stage
                             _core_arb_txs,
                             alice_cancel_sig,
@@ -552,10 +552,10 @@ impl Runtime {
                             error!("only Some(Wallet::Bob)");
                         }
                     }
-                    Reveal::BobProof(reveal) => {
+                    Reveal::Proof(reveal) => {
                         todo!()
                     }
-                    Reveal::AliceProof(reveal) => {
+                    Reveal::Proof(reveal) => {
                         todo!()
                     }
                 }
@@ -688,7 +688,6 @@ impl Runtime {
                     public_offer,
                     _bob_commit_params,
                     Some(bob_parameters),
-                    _bob_commit_proof,
                     Some(bob_proof),
                     core_arb_setup,   // None
                     alice_cancel_sig, // None
@@ -783,7 +782,6 @@ impl Runtime {
                     public_offer,
                     _bob_commit_params,
                     Some(bob_parameters),
-                    _bob_commit_proof,
                     Some(bob_proof),
                     Some(core_arb_setup),
                     Some(alice_cancel_sig),
@@ -935,6 +933,7 @@ impl Runtime {
                             local_trade_role: TradeRole::Taker,
                             public_offer,
                             local_params: Params::Bob(local_params),
+                            local_proof,
                             swap_id,
                             remote_commit: None,
                             funding_address: Some(funding_addr),
@@ -972,7 +971,6 @@ impl Runtime {
                                     None,
                                     None,
                                     None,
-                                    None,
                                 ),
                             );
                         } else {
@@ -983,6 +981,7 @@ impl Runtime {
                             local_trade_role: TradeRole::Taker,
                             public_offer,
                             local_params: Params::Alice(local_params),
+                            local_proof,
                             swap_id,
                             remote_commit: None,
                             funding_address: None,
