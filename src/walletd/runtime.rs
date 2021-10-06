@@ -42,8 +42,8 @@ use farcaster_core::{
     monero::Monero,
     negotiation::PublicOffer,
     protocol_message::{
-        BuyProcedureSignature, CommitAliceParameters, CommitBobParameters, CommitProof,
-        CoreArbitratingSetup, RefundProcedureSignatures,
+        BuyProcedureSignature, CommitAliceParameters, CommitBobParameters, CoreArbitratingSetup,
+        RefundProcedureSignatures,
     },
     role::{Alice, Bob, SwapRole, TradeRole},
     swap::btcxmr::{BtcXmr, KeyManager},
@@ -159,7 +159,6 @@ pub struct BobState {
     funding_tx: Option<FundingTx>,
     remote_commit_params: Option<CommitAliceParameters<BtcXmr>>,
     remote_params: Option<AliceParameters<BtcXmr>>,
-    remote_commit_proof: Option<CommitProof<BtcXmr>>,
     remote_proof: Option<Proof<BtcXmr>>,
     core_arb_setup: Option<CoreArbitratingSetup<BtcXmr>>,
     adaptor_buy: Option<SignedAdaptorBuy<Bitcoin<SegwitV0>>>,
@@ -186,7 +185,6 @@ impl BobState {
             funding_tx,
             remote_commit_params,
             remote_params: None,
-            remote_commit_proof: None,
             remote_proof: None,
             core_arb_setup: None,
             adaptor_buy: None,
@@ -435,9 +433,6 @@ impl Runtime {
                             error!("Wallet not found or not on correct state");
                             return Ok(());
                         }
-                    }
-                    Commit::Proof(CommitProof { swap_id, .. }) => {
-                        todo!()
                     }
                 }
             }

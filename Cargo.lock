@@ -887,7 +887,7 @@ checksum = "d9435d864e017c3c6afeac1654189b06cdb491cf2ff73dbf0d73b0f292f42ff8"
 [[package]]
 name = "farcaster_core"
 version = "0.1.0"
-source = "git+https://github.com/Lederstrumpf/farcaster-core?branch=split_out_dleq_proof_from_parameters#e748f9c168425bea76fb3dc38eb7f73789d81a12"
+source = "git+https://github.com/Lederstrumpf/farcaster-core?branch=split_out_dleq_proof_from_parameters#65a4948603889a80b0b1b6c347913f29f23fa539"
 dependencies = [
  "amplify",
  "bincode",
