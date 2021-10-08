@@ -317,16 +317,22 @@ impl Runtime {
                                 local_trade_role: TradeRole::Maker,
                                 public_offer: pub_offer,
                                 local_params: Params::Bob(local_params.clone()),
-                                local_proof,
+                                // local_proof,
                                 swap_id,
                                 remote_commit: Some(remote_commit),
                                 funding_address: Some(funding_addr),
                             };
+                            let reveal_proof: Reveal = (swap_id, local_proof).into();
                             self.swaps.insert(swap_id, None);
                             self.send_ctl(
                                 senders,
                                 ServiceId::Farcasterd,
                                 Request::LaunchSwap(launch_swap),
+                            )?;
+                            self.send_ctl(
+                                senders,
+                                ServiceId::Farcasterd,
+                                Request::Protocol(Msg::Reveal(reveal_proof)),
                             )?;
                         } else {
                             error!("Wallet already existed");
@@ -366,7 +372,7 @@ impl Runtime {
                                     local_trade_role: TradeRole::Maker,
                                     public_offer: pub_offer,
                                     local_params: Params::Alice(params),
-                                    local_proof: proof,
+                                    // local_proof: proof,
                                     swap_id,
                                     remote_commit: Some(remote_commit),
                                     funding_address: None,
@@ -375,6 +381,11 @@ impl Runtime {
                                     senders,
                                     ServiceId::Farcasterd,
                                     Request::LaunchSwap(launch_swap),
+                                )?;
+                                self.send_ctl(
+                                    senders,
+                                    ServiceId::Farcasterd,
+                                    Request::Protocol(Msg::Reveal((swap_id, proof).into())),
                                 )?;
                             } else {
                                 error!("Not Commit::Bob");
@@ -928,7 +939,7 @@ impl Runtime {
                             local_trade_role: TradeRole::Taker,
                             public_offer,
                             local_params: Params::Bob(local_params),
-                            local_proof,
+                            // local_proof,
                             swap_id,
                             remote_commit: None,
                             funding_address: Some(funding_addr),
@@ -938,6 +949,11 @@ impl Runtime {
                             source,
                             ServiceId::Farcasterd,
                             Request::LaunchSwap(launch_swap),
+                        )?;
+                        self.send_ctl(
+                            senders,
+                            ServiceId::Farcasterd,
+                            Request::Protocol(Msg::Reveal((swap_id, local_proof).into())),
                         )?;
                     }
                     SwapRole::Alice => {
@@ -976,7 +992,7 @@ impl Runtime {
                             local_trade_role: TradeRole::Taker,
                             public_offer,
                             local_params: Params::Alice(local_params),
-                            local_proof,
+                            // local_proof,
                             swap_id,
                             remote_commit: None,
                             funding_address: None,
