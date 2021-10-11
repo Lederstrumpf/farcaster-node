@@ -239,7 +239,7 @@ pub enum AliceState {
     CommitA(CommitC), // local, local, local, remote
     // #[display("Reveal: {0:#?}")]
     #[display("Reveal")]
-    RevealA(Option<Params>, Commit), // local, remote
+    RevealA(Option<TradeRole>, Option<Params>, Commit), // local, remote
     // #[display("RefundProcSigs: {0}")]
     #[display("RefundProcSigs")]
     RefundSigA(RefundSigA),
@@ -276,7 +276,7 @@ pub enum BobState {
     CommitB(CommitC, bitcoin::Address),
     // #[display("Reveal: {0:#?}")]
     #[display("Reveal")]
-    RevealB(Option<Params>, Commit), // local, remote
+    RevealB(Option<TradeRole>, Option<Params>, Commit), // local, remote
     // #[display("CoreArb: {0:#?}")]
     #[display("CoreArb")]
     CorearbB(CoreArbitratingSetup<BtcXmr>), // lock (not signed)
@@ -554,16 +554,20 @@ impl Runtime {
                     Msg::MakerCommit(remote_commit) => {
                         trace!("received commitment from counterparty, can now reveal");
                         let next_state = match self.state.clone() {
-                            State::Alice(AliceState::CommitA(CommitC { local_params, .. })) => {
-                                Ok(State::Alice(AliceState::RevealA(
-                                    Some(local_params),
-                                    remote_commit.clone(),
-                                )))
-                            }
+                            State::Alice(AliceState::CommitA(CommitC {
+                                trade_role,
+                                local_params,
+                                ..
+                            })) => Ok(State::Alice(AliceState::RevealA(
+                                Some(trade_role),
+                                Some(local_params),
+                                remote_commit.clone(),
+                            ))),
                             State::Bob(BobState::CommitB(
                                 CommitC {
-                                    local_params,
                                     remote_commit: None,
+                                    trade_role,
+                                    local_params,
                                     ..
                                 },
                                 addr,
@@ -584,6 +588,7 @@ impl Runtime {
                                         Request::SyncerTask(task),
                                     )?;
                                     Ok(State::Bob(BobState::RevealB(
+                                        Some(trade_role),
                                         Some(local_params),
                                         remote_commit.clone(),
                                     )))
@@ -671,11 +676,13 @@ impl Runtime {
                             // counterparty has already revealed commitment, i.e. we're
                             // maker and counterparty is taker. now proceed to reveal state.
                             State::Alice(AliceState::CommitA(CommitC {
+                                trade_role,
                                 remote_commit: Some(remote_commit),
                                 local_params,
                                 ..
                             })) => Ok((
                                 State::Alice(AliceState::RevealA(
+                                    Some(trade_role),
                                     Some(local_params),
                                     remote_commit.clone(),
                                 )),
@@ -683,6 +690,7 @@ impl Runtime {
                             )),
                             State::Bob(BobState::CommitB(
                                 CommitC {
+                                    trade_role,
                                     remote_commit: Some(remote_commit),
                                     local_params,
                                     ..
@@ -706,6 +714,7 @@ impl Runtime {
                                     )?;
                                     Ok((
                                         State::Bob(BobState::RevealB(
+                                            Some(trade_role),
                                             Some(local_params),
                                             remote_commit.clone(),
                                         )),
@@ -719,15 +728,16 @@ impl Runtime {
                             }
                             // we're already in reveal state, i.e. we're taker, so don't change
                             // state once counterparty reveals too.
-                            State::Alice(AliceState::RevealA(local_params, remote_commit)) => Ok((
+                            State::Alice(AliceState::RevealA(None, None, remote_commit)) => Ok((
                                 State::Alice(AliceState::RevealA(
-                                    local_params,
+                                    None,
+                                    None,
                                     remote_commit.clone(),
                                 )),
                                 remote_commit,
                             )),
-                            State::Bob(BobState::RevealB(local_params, remote_commit)) => Ok((
-                                State::Bob(BobState::RevealB(local_params, remote_commit.clone())),
+                            State::Bob(BobState::RevealB(None, None, remote_commit)) => Ok((
+                                State::Bob(BobState::RevealB(None, None, remote_commit.clone())),
                                 remote_commit,
                             )),
                             state => Err(Error::Farcaster(format!(
@@ -909,7 +919,7 @@ impl Runtime {
                             error!("Swapd not responsible for swap {}", swap_id);
                             return Ok(());
                         }
-                        if let State::Alice(AliceState::RevealA(_, _)) = self.state {
+                        if let State::Alice(AliceState::RevealA(None, None, _)) = self.state {
                             for (&tx, tx_label) in [lock, cancel, refund].iter().zip([
                                 TxLabel::Lock,
                                 TxLabel::Cancel,
@@ -1107,8 +1117,16 @@ impl Runtime {
                 self.state = next_state;
             }
             Request::Protocol(Msg::Reveal(reveal)) => match self.state.clone() {
-                State::Alice(AliceState::RevealA(Some(local_params), remote_commit))
-                | State::Bob(BobState::RevealB(Some(local_params), remote_commit)) => {
+                State::Alice(AliceState::RevealA(
+                    Some(trade_role),
+                    Some(local_params),
+                    remote_commit,
+                ))
+                | State::Bob(BobState::RevealB(
+                    Some(trade_role),
+                    Some(local_params),
+                    remote_commit,
+                )) => {
                     let reveal_proof = Msg::Reveal(reveal);
                     let swap_id = reveal_proof.swap_id();
                     self.send_peer(senders, reveal_proof)?;
@@ -1117,8 +1135,10 @@ impl Runtime {
                     self.send_peer(senders, Msg::Reveal(reveal_params))?;
                     info!("sent reveal_proof to peerd");
                     let next_state = match self.state {
-                        State::Alice(_) => State::Alice(AliceState::RevealA(None, remote_commit)),
-                        State::Bob(_) => State::Bob(BobState::RevealB(None, remote_commit)),
+                        State::Alice(_) => {
+                            State::Alice(AliceState::RevealA(None, None, remote_commit))
+                        }
+                        State::Bob(_) => State::Bob(BobState::RevealB(None, None, remote_commit)),
                     };
                     info!("State transition: {}", next_state.bright_white_bold());
                     self.state = next_state;
@@ -1728,7 +1748,7 @@ impl Runtime {
             }
             Request::Protocol(Msg::CoreArbitratingSetup(core_arb_setup)) => {
                 let next_state = match self.state {
-                    State::Bob(BobState::RevealB(_, _)) => {
+                    State::Bob(BobState::RevealB(None, None, _)) => {
                         // below tx is unsigned
                         Ok(State::Bob(BobState::CorearbB(core_arb_setup.clone())))
                     }
@@ -1843,7 +1863,7 @@ impl Runtime {
 
             Request::Protocol(Msg::RefundProcedureSignatures(refund_proc_sigs)) => {
                 let next_state = match self.state {
-                    State::Alice(AliceState::RevealA(_, _)) => {
+                    State::Alice(AliceState::RevealA(None, None, _)) => {
                         Ok(State::Alice(AliceState::RefundSigA(RefundSigA {
                             xmr_locked: false,
                             buy_published: false,
