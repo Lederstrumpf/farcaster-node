@@ -639,6 +639,26 @@ impl Runtime {
                              Ctl Request::MakeSwap"
                         )
                     }
+                    Msg::Reveal(Reveal::Proof(_)) => {
+                        // These messages are always saved as pending and then forwarded once the parameter reveal forward is triggered
+                        info!("received proof - adding to pending");
+                        let pending_request = PendingRequest {
+                            request,
+                            dest: ServiceId::Wallet,
+                            bus_id: ServiceBus::Msg,
+                        };
+                        trace!(
+                            "This pending request will be called later: {:?}",
+                            &pending_request
+                        );
+                        if self
+                            .pending_requests
+                            .insert(ServiceId::Wallet, vec![pending_request])
+                            .is_some()
+                        {
+                            error!("Pending requests already existed prior to Reveal::Proof!")
+                        }
+                    }
                     // bob and alice
                     // store parameters from counterparty if we have not received them yet.
                     // if we're maker, also reveal to taker if their commitment is valid.
@@ -703,7 +723,6 @@ impl Runtime {
                             ))),
                         }?;
 
-                        // this code is dead?
                         // parameter processing irrespective of maker & taker role
                         let core_wallet = CommitmentEngine;
                         let remote_params_candidate = match reveal {
@@ -729,7 +748,8 @@ impl Runtime {
                                     Err(Error::Farcaster(err_msg.to_string()))?
                                 }
                             },
-                            Reveal::Proof(_reveal) => {
+                            Reveal::Proof(_) => {
+                                error!("this should have been caught by another pattern!");
                                 None
                                 // commitment verification performed by walletd - so what's the point here?
                             }
@@ -740,7 +760,87 @@ impl Runtime {
                         // pass request on to wallet daemon so that it can set remote params
                         match self.state {
                             // validated state above, no need to check again
-                            State::Alice(..) => self.send_wallet(msg_bus, senders, request)?,
+                            State::Alice(..) => {
+                                info!("Alice received reveal, now forwarding to wallet");
+                                let mut pending_requests = self
+                                    .pending_requests
+                                    .remove(&ServiceId::Wallet)
+                                    .expect("should have pending RevealProof request");
+                                if pending_requests.len() == 1 {
+                                    info!("had one pending request and forwarding");
+                                    // let PendingRequest {
+                                    //     request: request_parameters,
+                                    //     dest: dest_parameters,
+                                    //     bus_id: bus_id_parameters,
+                                    // } = pending_requests.pop().expect("checked .len() == 2");
+                                    let PendingRequest {
+                                        request: request_proof,
+                                        dest: dest_proof,
+                                        bus_id: bus_id_proof,
+                                    } = pending_requests.pop().expect("checked .len() == 2");
+
+                                    // continue RevealProof
+                                    // continuing request by sending it to wallet
+                                    info!("forwarding RevealProof");
+                                    if let (
+                                        Request::Protocol(Msg::Reveal(Reveal::Proof(_))),
+                                        ServiceId::Wallet,
+                                        ServiceBus::Msg,
+                                    ) = (&request_proof, &dest_proof, &bus_id_proof)
+                                    {
+                                        trace!(
+                                            "sending request {} to {} on bus {}",
+                                            &request_proof,
+                                            &dest_proof,
+                                            &bus_id_proof
+                                        );
+                                        senders.send_to(
+                                            bus_id_proof,
+                                            self.identity(),
+                                            dest_proof,
+                                            request_proof,
+                                        )?
+                                    } else {
+                                        error!("Not the expected request: found {:?}", request);
+                                    }
+
+                                    // continue Reveal
+                                    // continuing request by sending it to wallet
+                                    // info!("forwarding Reveal");
+                                    // if let (
+                                    //     Request::Protocol(Msg::Reveal(Reveal::AliceParameters(_))),
+                                    //     ServiceId::Wallet,
+                                    //     ServiceBus::Msg,
+                                    // ) = (&request_parameters, &dest_parameters, &bus_id_parameters)
+                                    // {
+                                    //     trace!(
+                                    //         "sending request {} to {} on bus {}",
+                                    //         &request_parameters,
+                                    //         &dest_parameters,
+                                    //         &bus_id_parameters
+                                    //     );
+                                    //     senders.send_to(
+                                    //         bus_id_parameters,
+                                    //         self.identity(),
+                                    //         dest_parameters,
+                                    //         request_parameters,
+                                    //     )?
+                                    // } else {
+                                    //     error!("Not the expected request: found {:?}", request);
+                                    // }
+                                    info!("now sending naked reveal");
+                                        senders.send_to(
+                                            ServiceBus::Msg,
+                                            self.identity(),
+                                            ServiceId::Wallet,
+                                            request,
+                                        )?
+
+                                } else {
+                                    error!("pending requests not found")
+                                }
+                                // self.send_wallet(msg_bus, senders, request)?
+                            },
                             State::Bob(..) => {
                                 // sending this request will initialize the
                                 // arbitrating setup, that can be only performed
@@ -756,15 +856,12 @@ impl Runtime {
                                     "This pending request will be called later: {:?}",
                                     &pending_request
                                 );
-                                // let mut pending_requests = self.pending_requests.get_mut(&ServiceId::Wallet);
-                                if self
-                                    .pending_requests
-                                    .insert(ServiceId::Wallet, vec![pending_request])
-                                    .is_none()
-                                {
-                                } else {
-                                    error!("A pending request was removed, FIXME")
+                                info!("pending requests: {:?}", self.pending_requests.len());
+                                let pending_requests = self.pending_requests.get_mut(&ServiceId::Wallet).expect("should already have received Reveal::Proof, so this key should exist.");
+                                if pending_requests.len() != 1 {
+                                    error!("should have a single pending Reveal::Proof only FIXME")
                                 }
+                                pending_requests.push(pending_request);
                             }
                         }
                         // up to here for both maker and taker, following only Maker
@@ -809,12 +906,13 @@ impl Runtime {
                                     Request::SyncerTask(watch_height_monero),
                                 )?;
 
-                                trace!("received commitment from counterparty, can now reveal");
-                                let reveal: Reveal = (self.swap_id(), local_params.clone()).into();
+                                info!("received commitment from counterparty, can now reveal");
+                                info!("pending requests: {:?}", self.pending_requests.get(&ServiceId::Wallet).unwrap().len());
+                                // self.pending_requests.get_mut(self.swap_id()).expect("already have pending ")
+                                // let reveal: Reveal = (self.swap_id(), local_params.clone()).into();
                                 // let reveal_proof: Reveal =
                                 //     (self.swap_id(), local_proof.clone()).into();
-                                self.send_peer(senders, Msg::Reveal(reveal))?;
-                                // self.send_peer(senders, Msg::Reveal(reveal_proof))?;
+                                // self.send_peer(senders, Msg::Reveal(reveal))?;
                                 info!("State transition: {}", next_state.bright_white_bold());
                                 self.state = next_state;
                             }
@@ -1117,7 +1215,7 @@ impl Runtime {
                     error!("Only wallet permited");
                     return Ok(());
                 }
-                trace!("funding updated received from wallet");
+                info!("funding updated received from wallet");
                 let mut pending_requests = self
                     .pending_requests
                     .remove(&source)
