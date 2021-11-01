@@ -1118,9 +1118,9 @@ impl Runtime {
                         .expect("Valid Monero Private Key");
                     info!("Extracted alice's monero key from Buy tx: {}", sk_a);
                     let sk_b = key_manager.get_or_derive_monero_spend_key()?;
-                    let spend_private = sk_a + sk_b;
-                    let spend = monero::PublicKey::from_private_key(&spend_private);
-                    info!("Full secret monero spending key: {}", spend_private);
+                    let spend_key = sk_a + sk_b;
+                    let spend = monero::PublicKey::from_private_key(&spend_key);
+                    info!("Full secret monero spending key: {}", spend_key);
 
                     let view_key_alice = *alice_params
                         .accordant_shared_keys
@@ -1151,7 +1151,7 @@ impl Runtime {
 
                     let address = s!("76KwxdgtWyJQK5a27PpqT973R6s7bZ4cKWTtUG6JEyrbLQy5F4ZwdUqgKpssGQzRxnd99LKWqFjYo92b8ngS7GqD1VZBEEL");
                     let sweep_keys = SweepXmrAddress {
-                        view_key,
+                        view_key: view,
                         spend_key,
                         address,
                     };
