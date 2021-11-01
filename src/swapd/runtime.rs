@@ -125,6 +125,12 @@ pub fn run(
         watched_addrs: none!(),
         watched_txs: none!(),
     };
+    
+    let net = match network {
+        blockchain::Network::Mainnet => monero::Network::Mainnet,
+        blockchain::Network::Testnet => monero::Network::Stagenet,
+        blockchain::Network::Local => monero::Network::Mainnet,
+    };
     let syncer_state = SyncerState {
         tasks,
         monero_height: 0,
@@ -132,7 +138,7 @@ pub fn run(
         confirmation_bound: 50000,
         lock_tx_confs: None,
         cancel_tx_confs: None,
-        network,
+        network: net,
         bitcoin_syncer: ServiceId::Syncer(Coin::Bitcoin, network),
         monero_syncer: ServiceId::Syncer(Coin::Monero, network),
         monero_amount,
@@ -261,7 +267,7 @@ struct SyncerState {
     confirmation_bound: u32,
     lock_tx_confs: Option<Request>,
     cancel_tx_confs: Option<Request>,
-    network: farcaster_core::blockchain::Network,
+    network: monero::Network,
     bitcoin_syncer: ServiceId,
     monero_syncer: ServiceId,
     monero_amount: monero::Amount,
@@ -532,15 +538,9 @@ impl SyncerState {
         info!("XMR spend key: {}", spend);
         let viewpair = monero::ViewPair { spend, view };
 
-        let net = match self.network {
-            blockchain::Network::Mainnet => monero::Network::Mainnet,
-            blockchain::Network::Testnet => monero::Network::Stagenet,
-            blockchain::Network::Local => monero::Network::Mainnet,
-        };
+        // info!("Network: {}", self.network);
 
-        info!("Network: {}", self.network);
-
-        let address = monero::Address::from_viewpair(net, &viewpair);
+        let address = monero::Address::from_viewpair(self.network, &viewpair);
 
         if swap_role == SwapRole::Alice {
             info!(
