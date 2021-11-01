@@ -531,7 +531,16 @@ impl SyncerState {
         info!("XMR view key: {}", view);
         info!("XMR spend key: {}", spend);
         let viewpair = monero::ViewPair { spend, view };
-        let address = monero::Address::from_viewpair(self.network.into(), &viewpair);
+
+        let net = match self.network {
+            blockchain::Network::Mainnet => monero::Network::Mainnet,
+            blockchain::Network::Testnet => monero::Network::Stagenet,
+            blockchain::Network::Local => monero::Network::Mainnet,
+        };
+
+        info!("Network: {}", self.network);
+
+        let address = monero::Address::from_viewpair(net, &viewpair);
 
         if swap_role == SwapRole::Alice {
             info!(
