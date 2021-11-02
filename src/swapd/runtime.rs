@@ -1377,6 +1377,7 @@ impl Runtime {
                         })) = &mut self.state
                         {
                             if !*xmr_locked {
+                                warn!("setting xmr_locked");
                                 *xmr_locked = true;
                             } else {
                                 warn!("xmr_locked was already set to true")
