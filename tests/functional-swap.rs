@@ -401,6 +401,12 @@ async fn run_swap(
     let before_balance = monero_wallet_lock.get_balance(0, None).await.unwrap();
     drop(monero_wallet_lock);
 
+    // Sleep here to work around a race condition between pending
+    // SweepXmrAddress requests and tx Acc Lock confirmations. If Acc Lock
+    // confirmations are produced before the pending request is queued, no
+    // action will take place after this point.
+    tokio::time::sleep(time::Duration::from_secs(10)).await;
+
     // generate some blocks on monero's side
     monero_regtest
         .generate_blocks(11, reusable_xmr_address())
