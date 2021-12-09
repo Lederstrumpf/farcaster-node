@@ -934,8 +934,17 @@ impl Runtime {
                         ),
                     };
                     let host = env::var("BITCOIN_HOST").unwrap_or("localhost".into());
+
+                    let network = self.funding_btc.get(&swap_id).expect("key exists").0.network;
+                    let port = match network {
+                        bitcoin::Network::Bitcoin => 8334,
+                        bitcoin::Network::Testnet => 18334,
+                        bitcoin::Network::Signet => 38332,
+                        bitcoin::Network::Regtest => 18443,
+                    };
+
                     let bitcoin_rpc =
-                        Client::new(&format!("http://{}:18334", host), Auth::CookieFile(path))
+                        Client::new(&format!("http://{}:{}", host, port), Auth::CookieFile(path))
                             .unwrap();
 
                     match bitcoin_rpc
