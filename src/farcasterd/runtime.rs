@@ -550,7 +550,7 @@ impl Runtime {
                 let (node_id, peer_address) = match (local_trade_role, self.listens.len()) {
                     // Maker has only one listener, MAYBE for more listeners self.listens may be a
                     // HashMap<RemoteSocketAddr, Vec<OfferId>>
-                    (TradeRole::Maker, 1) => (
+                    (TradeRole::Maker, _) => (
                         maker_node_id,
                         self.listens
                             .clone()
