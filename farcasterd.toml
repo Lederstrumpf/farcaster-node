@@ -51,3 +51,6 @@ electrum_server = "tcp://localhost:50001"
 monero_daemon = "http://localhost:18081"
 # Monero Wallet RPC used by the Monero syncer on regtest
 monero_rpc_wallet = "http://localhost:18083"
+
+[logging]
+colorized = false

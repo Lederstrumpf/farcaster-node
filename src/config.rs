@@ -39,6 +39,8 @@ pub struct Config {
     pub farcasterd: Option<FarcasterdConfig>,
     /// Syncer configuration
     pub syncers: Option<SyncersConfig>,
+    /// General logging configuration
+    pub logging: Option<LoggingConfig>,
 }
 
 impl Config {
@@ -87,6 +89,7 @@ impl Default for Config {
         Config {
             farcasterd: None,
             syncers: Some(SyncersConfig::default()),
+            logging: None,
         }
     }
 }
@@ -101,6 +104,19 @@ pub struct FarcasterdConfig {
 impl Default for FarcasterdConfig {
     fn default() -> Self {
         FarcasterdConfig { auto_funding: None }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(crate = "serde_crate")]
+pub struct LoggingConfig {
+    /// Sets the colorization forcing of logs, default to no forcing
+    pub colorized: Option<bool>,
+}
+
+impl Default for LoggingConfig {
+    fn default() -> Self {
+        LoggingConfig { colorized: None }
     }
 }
 

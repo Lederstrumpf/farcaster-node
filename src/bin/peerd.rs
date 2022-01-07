@@ -161,6 +161,7 @@ fn main() {
     trace!("Command-line arguments: {:?}", &opts);
     opts.process();
     trace!("Processed arguments: {:?}", &opts);
+    colored::control::set_override(true);
 
     let service_config: ServiceConfig = opts.shared.clone().into();
     trace!("Daemon configuration: {:#?}", &service_config);

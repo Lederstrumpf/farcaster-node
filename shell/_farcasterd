@@ -19,6 +19,7 @@ _farcasterd() {
 '--data-dir=[Data directory path]: :_files -/' \
 '-T+[Use Tor]: :_hosts' \
 '--tor-proxy=[Use Tor]: :_hosts' \
+'--color=[Force colored logging on or off]' \
 '-m+[ZMQ socket name/address to forward all incoming protocol messages]: :_files' \
 '--msg-socket=[ZMQ socket name/address to forward all incoming protocol messages]: :_files' \
 '-x+[ZMQ socket name/address for daemon control interface]: :_files' \

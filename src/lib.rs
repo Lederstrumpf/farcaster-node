@@ -41,6 +41,8 @@ extern crate internet2;
 extern crate clap;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate colored;
 
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;

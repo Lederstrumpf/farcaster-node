@@ -20,7 +20,7 @@ _peerd() {
 
     case "${cmd}" in
         peerd)
-            opts=" -h -V -L -C -p -o -d -v -T -m -x  --help --version --listen --connect --port --overlay --peer-secret-key --token --data-dir --verbose --tor-proxy --msg-socket --ctl-socket  "
+            opts=" -h -V -L -C -p -o -d -v -T -m -x  --help --version --listen --connect --port --overlay --peer-secret-key --token --data-dir --verbose --tor-proxy --color --msg-socket --ctl-socket  "
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -80,6 +80,10 @@ _peerd() {
                     return 0
                     ;;
                 -T)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --color)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

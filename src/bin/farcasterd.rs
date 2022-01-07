@@ -35,13 +35,15 @@ use bitcoin::secp256k1::rand::RngCore;
 
 use clap::Clap;
 
-use farcaster_node::Error;
+// use farcaster_node::{ServiceConfig, opts::ColorOptions};
 use farcaster_node::ServiceConfig;
 use farcaster_node::{
     config::parse_config,
     farcasterd::{self, Opts},
     rpc::request::Token,
 };
+// use farcaster_node::{config::LoggingConfig, Error};
+use farcaster_node::Error;
 
 fn main() -> Result<(), Error> {
     let mut opts = Opts::parse();
@@ -57,6 +59,24 @@ fn main() -> Result<(), Error> {
     debug!("Config file path: {}", &opts.config);
     let config = parse_config(&opts.config)?;
     debug!("Configuration: {:#?}", &config);
+
+    // match opts.shared.color
+    // {
+        // ColorOptions::Always => {info!("forcing colorization"); colored::control::set_override(true)},
+    //     ColorOptions::Never => {info!("forcing no colorization"); colored::control::set_override(false)},
+    //     ColorOptions::Auto => {info!("no colorization forcing requested");}
+    // }
+
+    // match config
+    //     .logging
+    //     .as_ref()
+    //     .unwrap_or(&LoggingConfig { colorized: None })
+    //     .colorized
+    // {
+    //     Some(true) => {info!("forcing colorization"); colored::control::set_override(true)},
+    //     Some(false) => {info!("forcing no colorization"); colored::control::set_override(false)},
+    //     None => {info!("no colorization forcing requested");}
+    // }
 
     // Generate runtime token
     let mut dest = [0u8; 16];

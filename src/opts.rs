@@ -40,6 +40,13 @@ pub const FARCASTER_CTL_SOCKET_NAME: &str = "lnpz:{data_dir}/ctl.rpc?api=esb";
 pub const FARCASTER_TOR_PROXY: &str = "127.0.0.1:9050";
 pub const FARCASTER_KEY_FILE: &str = "{data_dir}/key.dat";
 
+#[derive(Clap, Clone, PartialEq, Eq, Debug)]
+pub enum ColorOptions {
+    Always,
+    Never,
+    Auto,
+}
+
 /// Shared options used by different binaries
 #[derive(Clap, Clone, PartialEq, Eq, Debug)]
 pub struct Opts {
@@ -78,6 +85,17 @@ pub struct Opts {
         value_hint = ValueHint::Hostname
     )]
     pub tor_proxy: Option<Option<SocketAddr>>,
+
+    /// Force colored logging on or off
+    ///
+    /// If not set, no forcing occurs and coloring is context dependent.
+    #[clap(
+        long,
+        global = true,
+        default_value = "auto",
+        env = "FARCASTER_COLORED_LOGGING"
+    )]
+    pub color: ColorOptions,
 
     /// ZMQ socket name/address to forward all incoming protocol messages
     ///
@@ -126,8 +144,32 @@ impl FromStr for TokenString {
     }
 }
 
+impl FromStr for ColorOptions {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "always" => Ok(ColorOptions::Always),
+            "auto" => Ok(ColorOptions::Auto),
+            "never" => Ok(ColorOptions::Never),
+            _ => Err("invalid value - valid options are always, auto, and never".to_owned()),
+        }
+    }
+}
+
 impl Opts {
     pub fn process(&mut self) {
+        // match self.color {
+        //         ColorOptions::Always => {
+        //             // info!("forcing colorization");
+        //             colored::control::set_override(true)},
+        //         ColorOptions::Never => {
+        //             // info!("forcing no colorization");
+        //             colored::control::set_override(false)},
+        //         ColorOptions::Auto => {
+        //             // info!("no colorization forcing requested");
+        //         }
+        // }
         LogLevel::from_verbosity_flag_count(self.verbose).apply();
         let mut me = self.clone();
 
