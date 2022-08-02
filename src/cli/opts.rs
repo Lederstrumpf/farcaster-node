@@ -74,6 +74,10 @@ pub enum Command {
         select: OfferSelector,
     },
 
+    /// Lists IDs of public offers created by daemon
+    #[clap(aliases = &["loi"])]
+    ListOfferIds,
+
     /// Gives information on an open offer
     #[clap(aliases = &["oi"])]
     #[display("offer-info<{public_offer}>")]
@@ -82,8 +86,6 @@ pub enum Command {
         public_offer: PublicOffer,
     },
 
-    // /// Lists IDs of public offers created by daemon
-    // ListOfferIds,
     /// Lists listeners created by daemon
     #[clap(aliases = &["ll"])]
     ListListens,
