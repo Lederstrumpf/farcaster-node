@@ -108,8 +108,8 @@ impl Exec for Command {
                 runtime.report_response_or_fail()?;
             }
 
-            Command::ListOfferIds => {
-                runtime.request(ServiceId::Farcasterd, Request::ListOfferIds)?;
+            Command::ListOffersSerialized => {
+                runtime.request(ServiceId::Farcasterd, Request::ListOffersSerialized)?;
                 runtime.report_response_or_fail()?;
             }
 

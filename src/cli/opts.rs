@@ -75,8 +75,8 @@ pub enum Command {
     },
 
     /// Lists IDs of public offers created by daemon
-    #[clap(aliases = &["loi"])]
-    ListOfferIds,
+    #[clap(aliases = &["los"])]
+    ListOffersSerialized,
 
     /// Gives information on an open offer
     #[clap(aliases = &["oi"])]

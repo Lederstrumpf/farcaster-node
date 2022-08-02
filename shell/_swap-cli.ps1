@@ -37,7 +37,7 @@ Register-ArgumentCompleter -Native -CommandName 'swap-cli' -ScriptBlock {
             [CompletionResult]::new('peers', 'peers', [CompletionResultType]::ParameterValue, 'Lists existing peer connections')
             [CompletionResult]::new('list-swaps', 'list-swaps', [CompletionResultType]::ParameterValue, 'Lists running swaps')
             [CompletionResult]::new('list-offers', 'list-offers', [CompletionResultType]::ParameterValue, 'Lists public offers created by daemon')
-            [CompletionResult]::new('list-offer-ids', 'list-offer-ids', [CompletionResultType]::ParameterValue, 'Lists IDs of public offers created by daemon')
+            [CompletionResult]::new('list-offers-serialized', 'list-offers-serialized', [CompletionResultType]::ParameterValue, 'Lists IDs of public offers created by daemon')
             [CompletionResult]::new('offer-info', 'offer-info', [CompletionResultType]::ParameterValue, 'Gives information on an open offer')
             [CompletionResult]::new('list-listens', 'list-listens', [CompletionResultType]::ParameterValue, 'Lists listeners created by daemon')
             [CompletionResult]::new('list-checkpoints', 'list-checkpoints', [CompletionResultType]::ParameterValue, 'Lists saved checkpoints of the swaps')
@@ -107,7 +107,7 @@ Register-ArgumentCompleter -Native -CommandName 'swap-cli' -ScriptBlock {
             [CompletionResult]::new('--help', 'help', [CompletionResultType]::ParameterName, 'Print help information')
             break
         }
-        'swap-cli;list-offer-ids' {
+        'swap-cli;list-offers-serialized' {
             [CompletionResult]::new('-d', 'd', [CompletionResultType]::ParameterName, 'Data directory path')
             [CompletionResult]::new('--data-dir', 'data-dir', [CompletionResultType]::ParameterName, 'Data directory path')
             [CompletionResult]::new('-T', 'T', [CompletionResultType]::ParameterName, 'Use Tor')
