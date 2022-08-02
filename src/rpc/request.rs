@@ -380,7 +380,7 @@ pub enum Request {
 
     #[api(type = 106)]
     #[display("list_offer_ids()")]
-    ListOfferIds,
+    ListOffersSerialized,
 
     #[api(type = 105)]
     #[display("list_listens()")]
@@ -560,8 +560,7 @@ pub enum Request {
 
     #[api(type = 1113)]
     #[display(inner)]
-    #[from]
-    OfferIdList(List<PublicOfferId>),
+    OfferSerializedList(List<String>),
 
     // #[api(type = 1203)]
     // #[display("channel_funding({0})", alt = "{0:#}")]

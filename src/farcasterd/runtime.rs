@@ -475,6 +475,39 @@ impl Runtime {
                 };
             }
 
+            Request::RevokeOffer(public_offer) => {
+                debug!("attempting to revoke {}", public_offer);
+                if self.public_offers.remove(&public_offer) {
+                    info!("Revoked offer {}", public_offer);
+                    endpoints.send_to(
+                        ServiceBus::Ctl,
+                        ServiceId::Farcasterd,
+                        source,
+                        Request::String("Successfully revoked offer.".to_string()),
+                    )?;
+                } else {
+                    error!("failed to revoke {}", public_offer);
+                    endpoints.send_to(
+                        ServiceBus::Ctl,
+                        ServiceId::Farcasterd,
+                        source,
+                        Request::Failure(Failure {
+                            code: FailureCode::Unknown,
+                            info: "Coulod not find to be revoked offer.".to_string(),
+                        }),
+                    )?;
+                }
+            }
+
+            Request::ListOffersSerialized => {
+                endpoints.send_to(
+                    ServiceBus::Ctl,
+                    ServiceId::Farcasterd, // source
+                    source,                // destination
+                    Request::OfferSerializedList(self.public_offers.iter().map(|public_offer| public_offer.to_string()).collect()),
+                )?;
+            }
+
             Request::ListListens => {
                 let listen_url: List<String> =
                     List::from_iter(self.listens.clone().iter().map(|listen| listen.to_string()));
