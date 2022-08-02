@@ -95,7 +95,7 @@ _arguments "${_arguments_options[@]}" \
 '--help[Print help information]' \
 && ret=0
 ;;
-(list-offer-ids)
+(list-offers-serialized)
 _arguments "${_arguments_options[@]}" \
 '-d+[Data directory path]:DATA_DIR:_files -/' \
 '--data-dir=[Data directory path]:DATA_DIR:_files -/' \
@@ -339,7 +339,7 @@ _swap-cli_commands() {
 'peers:Lists existing peer connections' \
 'list-swaps:Lists running swaps' \
 'list-offers:Lists public offers created by daemon' \
-'list-offer-ids:Lists IDs of public offers created by daemon' \
+'list-offers-serialized:Lists IDs of public offers created by daemon' \
 'offer-info:Gives information on an open offer' \
 'list-listens:Lists listeners created by daemon' \
 'list-checkpoints:Lists saved checkpoints of the swaps' \
@@ -381,15 +381,15 @@ _swap-cli__list-listens_commands() {
     local commands; commands=()
     _describe -t commands 'swap-cli list-listens commands' commands "$@"
 }
-(( $+functions[_swap-cli__list-offer-ids_commands] )) ||
-_swap-cli__list-offer-ids_commands() {
-    local commands; commands=()
-    _describe -t commands 'swap-cli list-offer-ids commands' commands "$@"
-}
 (( $+functions[_swap-cli__list-offers_commands] )) ||
 _swap-cli__list-offers_commands() {
     local commands; commands=()
     _describe -t commands 'swap-cli list-offers commands' commands "$@"
+}
+(( $+functions[_swap-cli__list-offers-serialized_commands] )) ||
+_swap-cli__list-offers-serialized_commands() {
+    local commands; commands=()
+    _describe -t commands 'swap-cli list-offers-serialized commands' commands "$@"
 }
 (( $+functions[_swap-cli__list-swaps_commands] )) ||
 _swap-cli__list-swaps_commands() {

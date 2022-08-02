@@ -27,11 +27,11 @@ _swap-cli() {
             list-listens)
                 cmd+="__list__listens"
                 ;;
-            list-offer-ids)
-                cmd+="__list__offer__ids"
-                ;;
             list-offers)
                 cmd+="__list__offers"
+                ;;
+            list-offers-serialized)
+                cmd+="__list__offers__serialized"
                 ;;
             list-swaps)
                 cmd+="__list__swaps"
@@ -73,7 +73,7 @@ _swap-cli() {
 
     case "${cmd}" in
         swap__cli)
-            opts="-h -V -d -T -m -x --help --version --data-dir --tor-proxy --msg-socket --ctl-socket info peers list-swaps list-offers list-offer-ids offer-info list-listens list-checkpoints restore-checkpoint make take revoke-offer abort-swap progress needs-funding sweep-bitcoin-address sweep-monero-address help"
+            opts="-h -V -d -T -m -x --help --version --data-dir --tor-proxy --msg-socket --ctl-socket info peers list-swaps list-offers list-offers-serialized offer-info list-listens list-checkpoints restore-checkpoint make take revoke-offer abort-swap progress needs-funding sweep-bitcoin-address sweep-monero-address help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -348,13 +348,21 @@ _swap-cli() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        swap__cli__list__offer__ids)
-            opts="-h -d -T -m -x --help --data-dir --tor-proxy --msg-socket --ctl-socket"
+        swap__cli__list__offers)
+            opts="-s -h -d -T -m -x --select --help --data-dir --tor-proxy --msg-socket --ctl-socket"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --select)
+                    COMPREPLY=($(compgen -W "open Open inprogress in_progress ended Ended all All" -- "${cur}"))
+                    return 0
+                    ;;
+                -s)
+                    COMPREPLY=($(compgen -W "open Open inprogress in_progress ended Ended all All" -- "${cur}"))
+                    return 0
+                    ;;
                 --data-dir)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -394,21 +402,13 @@ _swap-cli() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        swap__cli__list__offers)
-            opts="-s -h -d -T -m -x --select --help --data-dir --tor-proxy --msg-socket --ctl-socket"
+        swap__cli__list__offers__serialized)
+            opts="-h -d -T -m -x --help --data-dir --tor-proxy --msg-socket --ctl-socket"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
-                --select)
-                    COMPREPLY=($(compgen -W "open Open inprogress in_progress ended Ended all All" -- "${cur}"))
-                    return 0
-                    ;;
-                -s)
-                    COMPREPLY=($(compgen -W "open Open inprogress in_progress ended Ended all All" -- "${cur}"))
-                    return 0
-                    ;;
                 --data-dir)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0

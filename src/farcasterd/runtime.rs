@@ -986,12 +986,12 @@ impl Runtime {
                 }
             }
 
-            Request::ListOfferIds => {
+            Request::ListOffersSerialized => {
                 endpoints.send_to(
                     ServiceBus::Ctl,
                     ServiceId::Farcasterd, // source
                     source,                // destination
-                    Request::OfferIdList(self.public_offers.iter().map(|public_offer| public_offer.id()).collect()),
+                    Request::OfferSerializedList(self.public_offers.iter().map(|public_offer| public_offer.to_string()).collect()),
                 )?;
             }
 
