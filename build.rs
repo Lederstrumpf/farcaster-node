@@ -15,8 +15,11 @@
 fn main() {
     let proto_file = "./src/grpcd/proto/farcaster.proto";
 
+    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+
     tonic_build::configure()
         .build_server(true)
+        .file_descriptor_set_path(out_dir.join("farcaster_descriptor.bin"))
         .compile(&[proto_file], &["."])
         .unwrap_or_else(|e| panic!("protobuf compile error: {}", e));
 
