@@ -41,6 +41,9 @@ use tonic::{transport::Server, Request as GrpcRequest, Response as GrpcResponse,
 
 pub mod farcaster {
     tonic::include_proto!("farcaster");
+
+    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
+        tonic::include_file_descriptor_set!("farcaster_descriptor");
 }
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, PartialOrd, Hash, Display)]
@@ -192,9 +195,15 @@ fn response_loop(
 }
 
 fn server_loop(service: FarcasterService, addr: SocketAddr) -> tokio::task::JoinHandle<()> {
+    let reflection_service = tonic_reflection::server::Builder::configure()
+        .register_encoded_file_descriptor_set(farcaster::FILE_DESCRIPTOR_SET)
+        .build()
+        .unwrap();
+
     tokio::task::spawn(async move {
         Server::builder()
             .add_service(FarcasterServer::new(service))
+            .add_service(reflection_service)
             .serve(addr)
             .await
             .expect("error running grpc server");

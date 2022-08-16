@@ -96,6 +96,7 @@ sysinfo = { version = "0.18.2" }
 tokio = { version = "1.18.2", features = ["full"] }
 toml = { version = "0.5", optional = true }
 tonic = "0.7.2"
+tonic-reflection = "0.4.0"
 zmq = { package = "zmq2", version = "0.5.0" }
 
 [build-dependencies]
