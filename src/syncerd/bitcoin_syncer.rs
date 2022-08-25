@@ -67,6 +67,7 @@ pub struct ElectrumRpc {
     block_hash: BlockHash,
     addresses: HashMap<BtcAddressAddendum, Option<Hex32Bytes>>,
     ping_count: u8,
+    polling: bool,
 }
 
 #[derive(Debug)]
@@ -97,9 +98,9 @@ fn create_electrum_client(
 impl ElectrumRpc {
     fn new(
         electrum_server: &str,
+        polling: bool,
         proxy_address: Option<String>,
     ) -> Result<Self, electrum_client::Error> {
-        debug!("creating ElectrumRpc client");
         let client = create_electrum_client(electrum_server, proxy_address)?;
         let header = client.block_headers_subscribe()?;
         debug!("New ElectrumRpc at height {:?}", header.height);
@@ -110,6 +111,7 @@ impl ElectrumRpc {
             height: header.height as u64,
             block_hash: header.header.block_hash(),
             ping_count: 0,
+            polling,
         })
     }
 
@@ -128,35 +130,37 @@ impl ElectrumRpc {
     ) -> Result<AddressNotif, Error> {
         debug!("attempting subscribing to: {:?}", address_addendum);
 
-        if !self.addresses.contains_key(&address_addendum) {
+        let script_status = if self.polling {
+            None
+        } else {
             debug!("subscribing to: {:?}", address_addendum);
-            let script_status = self
-                .client
-                .script_subscribe(&address_addendum.address.script_pubkey())?;
-            self.addresses
-                .insert(address_addendum.clone(), script_status);
-
+            self.client
+                .script_subscribe(&address_addendum.address.script_pubkey())?
+        };
+        if self
+            .addresses
+            .insert(address_addendum.clone(), script_status)
+            .is_some()
+        {
+        } else {
             debug!(
                 "registering address {} with script_status {:?}",
                 &address_addendum.address, &script_status
             );
-            if script_status.is_some() {
-                let txs = query_addr_history(&mut self.client, &address_addendum)?;
-                logging(&txs, &address_addendum);
-                let notif = AddressNotif {
-                    address: address_addendum,
-                    txs,
-                };
-                return Ok(Some(notif));
-            }
         }
-        Ok(None)
+        let txs = query_addr_history(&mut self.client, &address_addendum)?;
+        logging(&txs, &address_addendum);
+        let notif = AddressNotif {
+            address: address_addendum,
+            txs,
+        };
+        Ok(notif)
     }
 
     pub fn new_block_check(&mut self) -> Result<Vec<Block>, Error> {
         let mut blocks = vec![];
-        while let Ok(Some(HeaderNotification { height, header })) = self.client.block_headers_pop()
-        {
+        if self.polling {
+            let HeaderNotification { height, header } = self.client.block_headers_subscribe()?;
             self.height = height as u64;
             self.block_hash = header.block_hash();
             trace!("new height received: {:?}", self.height);
@@ -164,6 +168,18 @@ impl ElectrumRpc {
                 height: self.height,
                 block_hash: self.block_hash,
             });
+        } else {
+            while let Ok(Some(HeaderNotification { height, header })) =
+                self.client.block_headers_pop()
+            {
+                self.height = height as u64;
+                self.block_hash = header.block_hash();
+                trace!("new height received: {:?}", self.height);
+                blocks.push(Block {
+                    height: self.height,
+                    block_hash: self.block_hash,
+                });
+            }
         }
         Ok(blocks)
     }
@@ -171,38 +187,52 @@ impl ElectrumRpc {
     /// check if a subscribed address received a new transaction
     pub fn address_change_check(&mut self) -> Vec<AddressNotif> {
         let mut notifs: Vec<AddressNotif> = vec![];
-        for (address, previous_status) in self.addresses.clone().into_iter() {
-            // get pending notifications for this address/script_pubkey
-            let script_pubkey = &address.address.script_pubkey();
-            while let Ok(Some(script_status)) = self.client.script_pop(script_pubkey) {
-                if Some(script_status) != previous_status {
-                    if self
-                        .addresses
-                        .insert(address.clone(), Some(script_status))
-                        .is_some()
-                    {
-                        debug!(
-                            "updated address {:?} with script_status {:?}",
-                            &address, &script_status
-                        );
+        if self.polling {
+            for address in self.addresses.keys().clone() {
+                if let Ok(txs) = query_addr_history(&mut self.client, address) {
+                    logging(&txs, &address);
+                    let new_notif = AddressNotif {
+                        address: address.clone(),
+                        txs,
+                    };
+                    notifs.push(new_notif);
+                }
+            }
+        } else {
+            for (address, previous_status) in self.addresses.clone().into_iter() {
+                // get pending notifications for this address/script_pubkey
+                let script_pubkey = &address.address.script_pubkey();
+
+                while let Ok(Some(script_status)) = self.client.script_pop(script_pubkey) {
+                    if Some(script_status) != previous_status {
+                        if self
+                            .addresses
+                            .insert(address.clone(), Some(script_status))
+                            .is_some()
+                        {
+                            debug!(
+                                "updated address {:?} with script_status {:?}",
+                                &address, &script_status
+                            );
+                        } else {
+                            debug!(
+                                "registering address {:?} with script_status {:?}",
+                                &address, &script_status
+                            );
+                        }
+                        if let Ok(txs) = query_addr_history(&mut self.client, &address) {
+                            debug!("creating AddressNotif");
+                            logging(&txs, &address);
+                            let new_notif = AddressNotif {
+                                address: address.clone(),
+                                txs,
+                            };
+                            debug!("creating address notifications");
+                            notifs.push(new_notif);
+                        }
                     } else {
-                        debug!(
-                            "registering address {:?} with script_status {:?}",
-                            &address, &script_status
-                        );
+                        debug!("state did not change for given address");
                     }
-                    if let Ok(txs) = query_addr_history(&mut self.client, &address) {
-                        debug!("creating AddressNotif");
-                        logging(&txs, &address);
-                        let new_notif = AddressNotif {
-                            address: address.clone(),
-                            txs,
-                        };
-                        debug!("creating address notifications");
-                        notifs.push(new_notif);
-                    }
-                } else {
-                    debug!("state did not change for given address");
                 }
             }
         }
@@ -640,10 +670,11 @@ fn address_polling(
     state: Arc<Mutex<SyncerState>>,
     electrum_server: String,
     proxy_address: Option<String>,
+    polling: bool,
 ) -> tokio::task::JoinHandle<()> {
     tokio::task::spawn(async move {
         loop {
-            let mut rpc = match ElectrumRpc::new(&electrum_server, proxy_address.clone()) {
+            let mut rpc = match ElectrumRpc::new(&electrum_server, polling, proxy_address.clone()) {
                 Ok(client) => client,
                 Err(err) => {
                     error!(
@@ -668,21 +699,13 @@ fn address_polling(
                 drop(state_guard);
                 for (_, address) in addresses.clone() {
                     if let AddressAddendum::Bitcoin(address_addendum) = address.task.addendum {
+                        let mut tx_set = HashSet::new();
                         match rpc.script_subscribe(address_addendum.clone()) {
-                            Ok(Some(addr_notif)) => {
+                            Ok(addr_notif) if addr_notif.txs.is_empty() => {}
+                            Ok(addr_notif) => {
                                 logging(&addr_notif.txs, &address_addendum);
-                                let tx_set = create_set(addr_notif.txs);
-                                let mut state_guard = state.lock().await;
-                                state_guard
-                                    .change_address(
-                                        AddressAddendum::Bitcoin(address_addendum.clone()),
-                                        tx_set,
-                                    )
-                                    .await;
-                                drop(state_guard);
+                                tx_set = create_set(addr_notif.txs);
                             }
-                            // do nothing if we are already subscribed, or there is nothing to change
-                            Ok(None) => {}
                             // do nothing if we are already subscribed
                             Err(Error::Syncer(SyncerError::Electrum(
                                 electrum_client::Error::AlreadySubscribed(_),
@@ -692,19 +715,25 @@ fn address_polling(
                                 break;
                             }
                         }
+                        let mut state_guard = state.lock().await;
+                        state_guard
+                            .change_address(
+                                AddressAddendum::Bitcoin(address_addendum.clone()),
+                                tx_set,
+                            )
+                            .await;
+                        drop(state_guard);
                     }
                 }
                 let mut addrs_notifs = rpc.address_change_check();
-                if !addrs_notifs.is_empty() {
-                    let mut state_guard = state.lock().await;
-                    while let Some(AddressNotif { address, txs }) = addrs_notifs.pop() {
-                        logging(&txs, &address);
-                        state_guard
-                            .change_address(AddressAddendum::Bitcoin(address), create_set(txs))
-                            .await;
-                    }
-                    drop(state_guard);
+                let mut state_guard = state.lock().await;
+                while let Some(AddressNotif { address, txs }) = addrs_notifs.pop() {
+                    logging(&txs, &address);
+                    state_guard
+                        .change_address(AddressAddendum::Bitcoin(address), create_set(txs))
+                        .await;
                 }
+                drop(state_guard);
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
         }
@@ -715,11 +744,12 @@ fn height_polling(
     state: Arc<Mutex<SyncerState>>,
     electrum_server: String,
     proxy_address: Option<String>,
+    polling: bool,
 ) -> tokio::task::JoinHandle<()> {
     tokio::task::spawn(async move {
         // outer loop ensures the polling restarts if there is an error
         loop {
-            let mut rpc = match ElectrumRpc::new(&electrum_server, proxy_address.clone()) {
+            let mut rpc = match ElectrumRpc::new(&electrum_server, polling, proxy_address.clone()) {
                 Ok(client) => client,
                 Err(err) => {
                     error!(
@@ -780,11 +810,12 @@ fn unseen_transaction_polling(
     state: Arc<Mutex<SyncerState>>,
     electrum_server: String,
     proxy_address: Option<String>,
+    polling: bool,
 ) -> tokio::task::JoinHandle<()> {
     tokio::task::spawn(async move {
         // outer loop ensures the polling restarts if there is an error
         loop {
-            let rpc = match ElectrumRpc::new(&electrum_server, proxy_address.clone()) {
+            let rpc = match ElectrumRpc::new(&electrum_server, polling, proxy_address.clone()) {
                 Ok(client) => client,
                 Err(err) => {
                     error!(
@@ -948,7 +979,6 @@ fn sweep_polling(
             let sweep_addresses = state_guard.sweep_addresses.clone();
             drop(state_guard);
             if !sweep_addresses.is_empty() {
-                debug!("creating sweep polling electrum client");
                 match create_electrum_client(&electrum_server, proxy_address.clone()) {
                     Err(err) => {
                         error!(
@@ -1061,6 +1091,7 @@ impl Synclet for BitcoinSyncer {
         syncer_address: Vec<u8>,
         opts: &Opts,
         network: Network,
+        polling: bool,
     ) -> Result<(), Error> {
         let btc_network = network.into();
         let proxy_address = opts.shared.tor_proxy.map(|address| address.to_string());
@@ -1111,18 +1142,21 @@ impl Synclet for BitcoinSyncer {
                         Arc::clone(&state),
                         electrum_server.clone(),
                         proxy_address.clone(),
+                        polling,
                     );
 
                     let height_handle = height_polling(
                         Arc::clone(&state),
                         electrum_server.clone(),
                         proxy_address.clone(),
+                        polling,
                     );
 
                     let unseen_transaction_handle = unseen_transaction_polling(
                         Arc::clone(&state),
                         electrum_server.clone(),
                         proxy_address.clone(),
+                        polling,
                     );
 
                     let transaction_broadcast_handle = transaction_broadcasting(
