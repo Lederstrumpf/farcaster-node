@@ -85,13 +85,12 @@ fn create_electrum_client(
     electrum_server: &str,
     proxy_address: Option<String>,
 ) -> Result<Client, electrum_client::Error> {
-    let config = ConfigBuilder::new().retry(0);
-
     if let Some(proxy_address) = proxy_address {
         let proxy = Socks5Config::new(proxy_address);
-        Client::from_config(electrum_server, config.socks5(Some(proxy)).unwrap().build())
+        let config = ConfigBuilder::new().socks5(Some(proxy)).unwrap().build();
+        Client::from_config(electrum_server, config)
     } else {
-        Client::from_config(electrum_server, config.build())
+        Client::new(electrum_server)
     }
 }
 
@@ -707,11 +706,6 @@ fn address_polling(
                 }
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
-
-            // we need to un-subscribe all addresses first if we are creating a new client
-            let mut state_guard = state.lock().await;
-            state_guard.unsubscribe_addresses();
-            drop(state_guard);
         }
     })
 }
