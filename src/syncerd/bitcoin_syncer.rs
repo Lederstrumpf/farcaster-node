@@ -135,18 +135,22 @@ impl ElectrumRpc {
                 .script_subscribe(&address_addendum.address.script_pubkey())?;
             self.addresses
                 .insert(address_addendum.clone(), script_status);
+
             debug!(
                 "registering address {} with script_status {:?}",
                 &address_addendum.address, &script_status
             );
+            if script_status.is_some() {
+                let txs = query_addr_history(&mut self.client, &address_addendum)?;
+                logging(&txs, &address_addendum);
+                let notif = AddressNotif {
+                    address: address_addendum,
+                    txs,
+                };
+                return Ok(Some(notif));
+            }
         }
-        let txs = query_addr_history(&mut self.client, &address_addendum)?;
-        logging(&txs, &address_addendum);
-        let notif = AddressNotif {
-            address: address_addendum,
-            txs,
-        };
-        Ok(notif)
+        Ok(None)
     }
 
     pub fn new_block_check(&mut self) -> Result<Vec<Block>, Error> {
@@ -662,33 +666,30 @@ fn address_polling(
                 let state_guard = state.lock().await;
                 let addresses = state_guard.addresses.clone();
                 drop(state_guard);
-                for (id, address) in addresses.clone() {
+                for (_, address) in addresses.clone() {
                     if let AddressAddendum::Bitcoin(address_addendum) = address.task.addendum {
-                        if !address.subscribed {
-                            match rpc.script_subscribe(address_addendum.clone()) {
-                                Ok(notif) => {
-                                    logging(&notif.txs, &address_addendum);
-                                    let tx_set = create_set(notif.txs);
-                                    let mut state_guard = state.lock().await;
-                                    if let Some(address) = state_guard.addresses.get_mut(&id) {
-                                        address.subscribed = true;
-                                    }
-                                    state_guard
-                                        .change_address(
-                                            AddressAddendum::Bitcoin(address_addendum.clone()),
-                                            tx_set,
-                                        )
-                                        .await;
-                                    drop(state_guard);
-                                }
-                                // do nothing if we are already subscribed
-                                Err(Error::Syncer(SyncerError::Electrum(
-                                    electrum_client::Error::AlreadySubscribed(_),
-                                ))) => {}
-                                Err(e) => {
-                                    error!("error in bitcoin address polling: {}", e);
-                                    break;
-                                }
+                        match rpc.script_subscribe(address_addendum.clone()) {
+                            Ok(Some(addr_notif)) => {
+                                logging(&addr_notif.txs, &address_addendum);
+                                let tx_set = create_set(addr_notif.txs);
+                                let mut state_guard = state.lock().await;
+                                state_guard
+                                    .change_address(
+                                        AddressAddendum::Bitcoin(address_addendum.clone()),
+                                        tx_set,
+                                    )
+                                    .await;
+                                drop(state_guard);
+                            }
+                            // do nothing if we are already subscribed, or there is nothing to change
+                            Ok(None) => {}
+                            // do nothing if we are already subscribed
+                            Err(Error::Syncer(SyncerError::Electrum(
+                                electrum_client::Error::AlreadySubscribed(_),
+                            ))) => {}
+                            Err(e) => {
+                                error!("error in bitcoin address polling: {}", e);
+                                break;
                             }
                         }
                     }

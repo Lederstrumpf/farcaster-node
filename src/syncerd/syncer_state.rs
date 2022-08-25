@@ -67,7 +67,6 @@ pub struct WatchedTransaction {
 pub struct AddressTransactions {
     pub task: WatchAddress,
     known_txs: HashSet<AddressTx>,
-    pub subscribed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
@@ -301,7 +300,6 @@ impl SyncerState {
         let address_txs = AddressTransactions {
             task,
             known_txs: none!(),
-            subscribed: false,
         };
         self.addresses.insert(self.task_count.into(), address_txs);
     }
@@ -502,7 +500,6 @@ impl SyncerState {
                         AddressTransactions {
                             task: addr.task,
                             known_txs: txs.clone(),
-                            subscribed: addr.subscribed,
                         },
                     )
                 })
