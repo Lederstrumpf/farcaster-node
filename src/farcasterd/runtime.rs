@@ -504,7 +504,13 @@ impl Runtime {
                     ServiceBus::Ctl,
                     ServiceId::Farcasterd, // source
                     source,                // destination
-                    Request::OfferSerializedList(self.public_offers.iter().map(|public_offer| public_offer.to_string()).collect()),
+                    Request::OfferSerializedList(
+                        self.public_offers
+                            .iter()
+                            .filter(|k| !self.consumed_offers_contains(k))
+                            .map(|public_offer| public_offer.to_string())
+                            .collect(),
+                    ),
                 )?;
             }
 
@@ -1040,7 +1046,7 @@ impl Runtime {
             Ok(Some(new_tsm))
         } else {
             info!(
-                "Trade state machine ended {} -> {}",
+                "Trade state machine ended {:?} -> {}",
                 tsm_display.red_bold(),
                 "End".to_string().bright_green_bold()
             );

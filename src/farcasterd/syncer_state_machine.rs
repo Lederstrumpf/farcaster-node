@@ -51,8 +51,8 @@ pub enum SyncerStateMachine {
 pub struct AwaitingSyncer {
     source: ServiceId,
     syncer: ServiceId,
-    syncer_task: Task,
     syncer_task_id: TaskId,
+    syncer_task: Task,
 }
 
 pub struct AwaitingSyncerRequest {
