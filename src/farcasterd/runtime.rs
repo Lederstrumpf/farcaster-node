@@ -505,7 +505,13 @@ impl Runtime {
                     ServiceBus::Ctl,
                     ServiceId::Farcasterd, // source
                     source,                // destination
-                    Request::OfferSerializedList(self.public_offers.iter().map(|public_offer| public_offer.to_string()).collect()),
+                    Request::OfferSerializedList(
+                        self.public_offers
+                            .iter()
+                            .filter(|k| self.open_offers_contains(k))
+                            .map(|public_offer| public_offer.to_string())
+                            .collect(),
+                    ),
                 )?;
             }
 
