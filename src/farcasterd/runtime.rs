@@ -561,7 +561,7 @@ impl Runtime {
             // and send all notifications already in the queue
             Request::SubscribeProgress(swap_id) => {
                 let service = ServiceId::Swap(swap_id);
-                // if the swap is known either in the tsm's or progress, attach the client
+                // if the swap is known either in the tsms or self.progress, attach the client
                 // otherwise terminate
                 if self.running_swaps_contain(&swap_id) || self.progress.contains_key(&service) {
                     if let Some(subscribed) = self.progress_subscriptions.get_mut(&service) {

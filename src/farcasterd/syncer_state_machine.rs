@@ -37,7 +37,7 @@ pub enum SyncerStateMachine {
     Start,
 
     /// AwaitingSyncer state - transitions to AwaitingSyncerRequest once the
-    /// syncer Hello is reiceved. Transition to AwaitingSyncerRequest triggers a
+    /// syncer Hello is received. Transition to AwaitingSyncerRequest triggers a
     /// request to the target syncer.
     #[display("Awaiting Syncer")]
     AwaitingSyncer(AwaitingSyncer),
