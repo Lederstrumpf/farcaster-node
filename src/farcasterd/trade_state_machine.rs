@@ -1185,24 +1185,12 @@ fn attempt_transition_to_end(
         }
 
         (Request::FundingCanceled(blockchain), _) => {
-            match blockchain {
-                Blockchain::Bitcoin => {
-                    runtime.stats.incr_funding_bitcoin_canceled();
-                    info!(
-                        "{} | Your {} funding was canceled.",
-                        swap_id.bright_blue_italic(),
-                        blockchain.bright_green_bold()
-                    );
-                }
-                Blockchain::Monero => {
-                    runtime.stats.incr_funding_monero_canceled();
-                    info!(
-                        "{} | Your {} funding was canceled.",
-                        swap_id.bright_blue_italic(),
-                        blockchain.bright_green_bold()
-                    );
-                }
-            };
+            runtime.stats.incr_funding_canceled(&blockchain);
+            info!(
+                "{} | Your {} funding was canceled.",
+                swap_id.bright_blue_italic(),
+                blockchain.bright_green_bold()
+            );
             Ok(Some(TradeStateMachine::SwapdRunning(SwapdRunning {
                 peerd,
                 public_offer,

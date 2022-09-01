@@ -172,13 +172,17 @@ impl Stats {
             }
         }
     }
-    pub fn incr_funding_monero_canceled(&mut self) {
-        self.awaiting_funding_xmr -= 1;
-        self.funding_canceled_xmr += 1;
-    }
-    pub fn incr_funding_bitcoin_canceled(&mut self) {
-        self.awaiting_funding_btc -= 1;
-        self.funding_canceled_btc += 1;
+    pub fn incr_funding_canceled(&mut self, blockchain: &Blockchain) {
+        match blockchain {
+            Blockchain::Monero => {
+                self.awaiting_funding_xmr -= 1;
+                self.funding_canceled_xmr += 1;
+            }
+            Blockchain::Bitcoin => {
+                self.awaiting_funding_btc -= 1;
+                self.funding_canceled_btc += 1;
+            }
+        }
     }
     pub fn success_rate(&self) -> f64 {
         let Stats {
