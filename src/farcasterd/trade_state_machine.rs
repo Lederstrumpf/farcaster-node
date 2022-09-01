@@ -404,7 +404,7 @@ fn transition_to_take_offer(
             }) || runtime.public_offers.contains(&public_offer)
             {
                 let msg = format!(
-                    "{} already exists or was already taken, ignoring request",
+                    "{} already exists, was already taken, or is this node's own offer; ignoring request",
                     &public_offer.to_string()
                 );
                 warn!("{}", msg.err());
