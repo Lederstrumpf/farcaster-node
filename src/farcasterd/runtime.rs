@@ -866,15 +866,22 @@ impl Runtime {
         }
     }
 
+    /// Option returning a freshly instantiated `TradeStateMachine` for matching
+    /// requests or an already existing one, where applicable.
+    /// Returns `None` if request is invalid or no existing `TradeStateMachine`
+    /// is in the correct state to process it.
     fn match_request_to_trade_state_machine(
         &mut self,
         req: Request,
         source: ServiceId,
     ) -> Result<Option<TradeStateMachine>, Error> {
         match (req, source) {
+            // requests that invoke the initial state of a tsm
             (Request::RestoreCheckpoint(..), _) => Ok(Some(TradeStateMachine::StartRestore)),
             (Request::MakeOffer(..), _) => Ok(Some(TradeStateMachine::StartMaker)),
             (Request::TakeOffer(..), _) => Ok(Some(TradeStateMachine::StartTaker)),
+
+            // if a tsm's offer is still open, these requests can consume it
             (Request::Protocol(Msg::TakerCommit(request::TakeCommit { public_offer, .. })), _)
             | (Request::RevokeOffer(public_offer), _) => Ok(self
                 .trade_state_machines
@@ -887,6 +894,8 @@ impl Runtime {
                     }
                 })
                 .map(|pos| self.trade_state_machines.remove(pos))),
+
+            // if a tsm has an offer already consumed, the tsm's swap daemon can be launched
             (Request::LaunchSwap(LaunchSwap { public_offer, .. }), _) => Ok(self
                 .trade_state_machines
                 .iter()
@@ -898,6 +907,8 @@ impl Runtime {
                     }
                 })
                 .map(|pos| self.trade_state_machines.remove(pos))),
+
+            // generic match for requests intended for running swaps (TradeStateMachine::SwapRunning)
             (Request::PeerdUnreachable(..), ServiceId::Swap(swap_id))
             | (Request::FundingInfo(..), ServiceId::Swap(swap_id))
             | (Request::FundingCanceled(..), ServiceId::Swap(swap_id))
