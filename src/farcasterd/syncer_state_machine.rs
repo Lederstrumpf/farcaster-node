@@ -155,7 +155,7 @@ fn transition_to_awaiting_syncer_or_awaiting_syncer_request(
                 Ok(Some(SyncerStateMachine::AwaitingSyncer(AwaitingSyncer {
                     source,
                     syncer: ServiceId::Syncer(blockchain, network),
-                    syncer_task: syncer_task,
+                    syncer_task,
                     syncer_task_id,
                 })))
             }
@@ -195,7 +195,7 @@ fn transition_to_awaiting_syncer_or_awaiting_syncer_request(
                 Ok(Some(SyncerStateMachine::AwaitingSyncer(AwaitingSyncer {
                     source,
                     syncer: ServiceId::Syncer(blockchain, network),
-                    syncer_task: syncer_task,
+                    syncer_task,
                     syncer_task_id,
                 })))
             }
