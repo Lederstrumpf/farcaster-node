@@ -106,23 +106,23 @@ pub fn run(
 }
 
 pub struct Runtime {
-    pub identity: ServiceId,                     // Set on Runtime instantiation
-    pub wallet_token: Token,                     // Set on Runtime instantiation
-    pub started: SystemTime,                     // Set on Runtime instantiation
-    pub node_secret_key: Option<SecretKey>, // Set by Keys request shortly after Hello from walletd
-    pub node_public_key: Option<PublicKey>, // Set by Keys request shortly after Hello from walletd
-    pub listens: HashSet<InetSocketAddr>,   // The socket address of the binding peerd listeners
+    identity: ServiceId,                             // Set on Runtime instantiation
+    wallet_token: Token,                             // Set on Runtime instantiation
+    started: SystemTime,                             // Set on Runtime instantiation
+    node_secret_key: Option<SecretKey>, // Set by Keys request shortly after Hello from walletd
+    node_public_key: Option<PublicKey>, // Set by Keys request shortly after Hello from walletd
+    pub listens: HashSet<InetSocketAddr>, // Set by MakeOffer, contains unique socket addresses of the binding peerd listeners.
     pub spawning_services: HashSet<ServiceId>, // Services that have been launched, but have not replied with Hello yet
     pub registered_services: HashSet<ServiceId>, // Services that have announced themselves with Hello
-    pub public_offers: HashSet<PublicOffer>,     // The set of all known public offers
-    pub progress: HashMap<ServiceId, VecDeque<Request>>, // A mapping from Swap ServiceId to its sent and received progress requests
-    pub progress_subscriptions: HashMap<ServiceId, HashSet<ServiceId>>, // A mapping from a Client ServiceId to its subsribed swap progresses
+    pub public_offers: HashSet<PublicOffer>, // The set of all known public offers. Includes open, consumed and ended offers includes open, consumed and ended offers
+    progress: HashMap<ServiceId, VecDeque<Request>>, // A mapping from Swap ServiceId to its sent and received progress requests
+    progress_subscriptions: HashMap<ServiceId, HashSet<ServiceId>>, // A mapping from a Client ServiceId to its subsribed swap progresses
     pub checkpointed_pub_offers: List<CheckpointEntry>, // A list of existing swap checkpoint entries that may be restored again
     pub stats: Stats,                                   // Some stats about offers and swaps
     pub config: Config, // Configuration for syncers, auto-funding, and grpc
     pub syncer_task_counter: u32, // A strictly incrementing counter of issued syncer tasks
     pub trade_state_machines: Vec<TradeStateMachine>, // New trade state machines are inserted on creation and destroyed upon state machine end transitions
-    pub syncer_state_machines: HashMap<TaskId, SyncerStateMachine>, // New syncer state machines are inserted by their syncer task id when sending a syncer request and destroyed upon matching syncer request receival
+    syncer_state_machines: HashMap<TaskId, SyncerStateMachine>, // New syncer state machines are inserted by their syncer task id when sending a syncer request and destroyed upon matching syncer request receival
 }
 
 impl CtlServer for Runtime {}
@@ -953,7 +953,7 @@ impl Runtime {
         }
     }
 
-    pub fn process_request_with_state_machines(
+    fn process_request_with_state_machines(
         &mut self,
         request: Request,
         source: ServiceId,
@@ -987,7 +987,7 @@ impl Runtime {
         }
     }
 
-    pub fn execute_syncer_state_machine(
+    fn execute_syncer_state_machine(
         &mut self,
         endpoints: &mut Endpoints,
         source: ServiceId,
@@ -995,25 +995,34 @@ impl Runtime {
         ssm: SyncerStateMachine,
     ) -> Result<Option<SyncerStateMachine>, Error> {
         let event = Event::with(endpoints, self.identity(), source, request);
-        let tsm_display = ssm.to_string();
+        let ssm_display = ssm.to_string();
         if let Some(new_ssm) = ssm.next(event, self)? {
-            info!(
-                "Syncer state transition {} -> {}",
-                tsm_display.red_bold(),
-                new_ssm.bright_green_bold()
-            );
+            let new_ssm_display = new_ssm.to_string();
+            // relegate state transitions staying the same to debug
+            if new_ssm_display == ssm_display {
+                debug!(
+                    "Syncer state self transition {}",
+                    new_ssm.bright_green_bold()
+                );
+            } else {
+                info!(
+                    "Syncer state transition {} -> {}",
+                    ssm_display.red_bold(),
+                    new_ssm.bright_green_bold()
+                );
+            }
             Ok(Some(new_ssm))
         } else {
             info!(
                 "Syncer state machine ended {} -> {}",
-                tsm_display.red_bold(),
+                ssm_display.red_bold(),
                 "End".to_string().bright_green_bold()
             );
             Ok(None)
         }
     }
 
-    pub fn execute_trade_state_machine(
+    fn execute_trade_state_machine(
         &mut self,
         endpoints: &mut Endpoints,
         source: ServiceId,
@@ -1023,15 +1032,24 @@ impl Runtime {
         let event = Event::with(endpoints, self.identity(), source, request);
         let tsm_display = tsm.to_string();
         if let Some(new_tsm) = tsm.next(event, self)? {
-            info!(
-                "Trade state transition {} -> {}",
-                tsm_display.red_bold(),
-                new_tsm.bright_green_bold()
-            );
+            let new_tsm_display = new_tsm.to_string();
+            // relegate state transitions staying the same to debug
+            if new_tsm_display == tsm_display {
+                debug!(
+                    "Trade state self transition {}",
+                    new_tsm.bright_green_bold()
+                );
+            } else {
+                info!(
+                    "Trade state transition {} -> {}",
+                    tsm_display.red_bold(),
+                    new_tsm.bright_green_bold()
+                );
+            }
             Ok(Some(new_tsm))
         } else {
             info!(
-                "Trade state machine ended {} -> {}",
+                "Trade state machine ended {:?} -> {}",
                 tsm_display.red_bold(),
                 "End".to_string().bright_green_bold()
             );
