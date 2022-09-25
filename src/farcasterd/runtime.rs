@@ -508,7 +508,7 @@ impl Runtime {
                     Request::OfferSerializedList(
                         self.public_offers
                             .iter()
-                            .filter(|k| !self.consumed_offers_contains(k))
+                            .filter(|k| self.open_offers_contains(k))
                             .map(|public_offer| public_offer.to_string())
                             .collect(),
                     ),
