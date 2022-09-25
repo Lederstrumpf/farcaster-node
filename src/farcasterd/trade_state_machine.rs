@@ -157,7 +157,7 @@ impl StateMachine<Runtime, Error> for TradeStateMachine {
             TradeStateMachine::StartMaker => transition_to_make_offer(event, runtime),
             TradeStateMachine::StartRestore => transition_to_restoring_swapd(event, runtime),
             TradeStateMachine::MakeOffer(make_offer) => {
-                attempt_transition_to_taker_commited(event, runtime, make_offer)
+                attempt_transition_to_taker_committed(event, runtime, make_offer)
             }
             TradeStateMachine::TakerCommit(taker_commit) => {
                 attempt_transition_from_taker_commit_to_swapd_launched(event, runtime, taker_commit)
@@ -319,7 +319,6 @@ fn transition_to_make_offer(
                         })?;
                 } else {
                     // no need for the keys, because peerd already knows them
-                    runtime.listens.insert(bind_addr);
                     let msg = format!("Already listening on {}", &bind_addr);
                     debug!("{}", &msg);
                 }
@@ -612,7 +611,7 @@ fn transition_to_restoring_swapd(
     }
 }
 
-fn attempt_transition_to_taker_commited(
+fn attempt_transition_to_taker_committed(
     mut event: Event,
     _runtime: &mut Runtime,
     make_offer: MakeOffer,
@@ -625,13 +624,13 @@ fn attempt_transition_to_taker_commited(
     match (event.request.clone(), event.source.clone()) {
         (
             Request::Protocol(Msg::TakerCommit(TakeCommit {
-                public_offer: commited_public_offer,
+                public_offer: committed_public_offer,
                 swap_id,
                 ..
             })),
             ServiceId::Peer(..),
         ) => {
-            if public_offer == commited_public_offer {
+            if public_offer == committed_public_offer {
                 let source = event.source.clone();
                 let btc_addr_req = Request::BitcoinAddress(BitcoinAddress(swap_id, arb_addr));
                 event.send_msg_service(ServiceId::Wallet, btc_addr_req)?;
@@ -679,11 +678,18 @@ fn attempt_transition_to_taker_commited(
                 })))
             }
         }
-        (req, _) => {
+        (req, source) => {
             if let Request::Hello = req {
-                trace!("Request {} invalid for state make offer.", req);
+                trace!(
+                    "Request {} from {} invalid for state make offer.",
+                    req,
+                    source
+                );
             } else {
-                warn!("Request {} invalid for state make offer.", req);
+                warn!(
+                    "Request {} from {} invalid for state make offer.",
+                    req, source
+                );
             }
             Ok(Some(TradeStateMachine::MakeOffer(MakeOffer {
                 public_offer,
@@ -1256,11 +1262,18 @@ fn attempt_transition_to_end(
             Ok(None)
         }
 
-        (req, _) => {
+        (req, source) => {
             if let Request::Hello = req {
-                trace!("Request {} invalid for state swapd running.", req);
+                trace!(
+                    "Request {} from {} invalid for state swapd running.",
+                    req,
+                    source
+                );
             } else {
-                warn!("Request {} invalid for state Swapd Running.", req);
+                warn!(
+                    "Request {} from {} invalid for state Swapd Running.",
+                    req, source
+                );
             }
             Ok(Some(TradeStateMachine::SwapdRunning(SwapdRunning {
                 peerd,
