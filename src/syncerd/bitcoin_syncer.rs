@@ -223,7 +223,8 @@ impl ElectrumRpc {
                             {
                                 Some(entry) => {
                                     debug!("Found tx: {}", &tx_id);
-                                    entry},
+                                    entry
+                                }
                                 None => {
                                     warn!(
                                         "{:?} should be found in the history if we successfully queried `transaction_get` for it",
@@ -241,7 +242,8 @@ impl ElectrumRpc {
                                     // drop(state_guard);
                                     continue;
                                 }
-                            }},
+                            }
+                        }
                         Err(err) => {
                             trace!(
                                 "error getting script history for {}, treating as not found: {}",
