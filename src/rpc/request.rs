@@ -378,6 +378,10 @@ pub enum Request {
     #[display("list_offers({0})")]
     ListOffers(OfferStatusSelector),
 
+    #[api(type = 106)]
+    #[display("list_offer_ids()")]
+    ListOffersSerialized,
+
     #[api(type = 105)]
     #[display("list_listens()")]
     ListListens,
@@ -528,10 +532,6 @@ pub enum Request {
     #[from]
     OfferList(List<OfferInfo>),
 
-    // #[api(type = 1107)]
-    // #[display("offer_list({0})", alt = "{0:#}")]
-    // #[from]
-    // OfferIdList(List<PublicOfferId>),
     #[api(type = 1107)]
     #[display(inner)]
     #[from]
@@ -557,6 +557,10 @@ pub enum Request {
     #[api(type = 1112)]
     #[display("funding_canceled({0})")]
     FundingCanceled(Blockchain),
+
+    #[api(type = 1113)]
+    #[display(inner)]
+    OfferSerializedList(List<String>),
 
     // #[api(type = 1203)]
     // #[display("channel_funding({0})", alt = "{0:#}")]

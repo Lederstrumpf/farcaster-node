@@ -75,6 +75,10 @@ pub enum Command {
         select: OfferSelector,
     },
 
+    /// Lists IDs of public offers created by daemon
+    #[clap(aliases = &["los"])]
+    ListOffersSerialized,
+
     /// Gives information on an open offer
     #[clap(aliases = &["oi"])]
     #[display("offer-info<{public_offer}>")]
