@@ -16,7 +16,7 @@
 
 use crate::cli::OfferSelector;
 use crate::swapd::CheckpointSwapd;
-use crate::syncerd::{Event, SweepBitcoinAddress, SweepMoneroAddress, Task};
+use crate::syncerd::{Event, SweepAddressAddendum, Task};
 use crate::walletd::runtime::CheckpointWallet;
 use amplify::{ToYamlString, Wrapper};
 use internet2::{CreateUnmarshaller, Unmarshaller};
@@ -378,10 +378,6 @@ pub enum Request {
     #[display("list_offers({0})")]
     ListOffers(OfferStatusSelector),
 
-    #[api(type = 106)]
-    #[display("list_offer_ids()")]
-    ListOffersSerialized,
-
     #[api(type = 105)]
     #[display("list_listens()")]
     ListListens,
@@ -532,6 +528,10 @@ pub enum Request {
     #[from]
     OfferList(List<OfferInfo>),
 
+    // #[api(type = 1107)]
+    // #[display("offer_list({0})", alt = "{0:#}")]
+    // #[from]
+    // OfferIdList(List<PublicOfferId>),
     #[api(type = 1107)]
     #[display(inner)]
     #[from]
@@ -558,10 +558,6 @@ pub enum Request {
     #[display("funding_canceled({0})")]
     FundingCanceled(Blockchain),
 
-    #[api(type = 1113)]
-    #[display(inner)]
-    OfferSerializedList(List<String>),
-
     // #[api(type = 1203)]
     // #[display("channel_funding({0})", alt = "{0:#}")]
     // #[from]
@@ -584,11 +580,6 @@ pub enum Request {
     #[display("syncer_bridge_ev({0})", alt = "{0:#}")]
     #[from]
     SyncerdBridgeEvent(SyncerdBridgeEvent),
-
-    #[api(type = 1303)]
-    #[display("task({0})", alt = "{0:#}")]
-    #[from]
-    SweepMoneroAddress(SweepMoneroAddress),
 
     #[api(type = 1304)]
     #[display("checkpoint({0})", alt = "{0:#}")]
@@ -614,7 +605,7 @@ pub enum Request {
     #[api(type = 1310)]
     #[display("task({0})", alt = "{0:#}")]
     #[from]
-    SweepBitcoinAddress(SweepBitcoinAddress),
+    SweepAddress(SweepAddressAddendum),
 
     #[api(type = 1311)]
     #[display("get_address_secret_key({0})")]

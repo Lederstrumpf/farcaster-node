@@ -13,7 +13,7 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use crate::rpc::request::{Address, AddressSecretKey};
-use crate::syncerd::{SweepBitcoinAddress, SweepMoneroAddress};
+use crate::syncerd::{SweepAddressAddendum, SweepBitcoinAddress, SweepMoneroAddress};
 use farcaster_core::swap::btcxmr::Offer;
 use std::io::{self, Read};
 use std::str::FromStr;
@@ -97,11 +97,6 @@ impl Exec for Command {
 
             Command::RestoreCheckpoint { swap_id } => {
                 runtime.request(ServiceId::Farcasterd, Request::RestoreCheckpoint(swap_id))?;
-                runtime.report_response_or_fail()?;
-            }
-
-            Command::ListOffersSerialized => {
-                runtime.request(ServiceId::Farcasterd, Request::ListOffersSerialized)?;
                 runtime.report_response_or_fail()?;
             }
 
@@ -326,11 +321,11 @@ impl Exec for Command {
                 {
                     runtime.request(
                         ServiceId::Farcasterd,
-                        Request::SweepBitcoinAddress(SweepBitcoinAddress {
+                        Request::SweepAddress(SweepAddressAddendum::Bitcoin(SweepBitcoinAddress {
                             source_address,
                             source_secret_key: secret_key,
                             destination_address,
-                        }),
+                        })),
                     )?;
                     runtime.report_response_or_fail()?;
                 } else {
@@ -351,12 +346,12 @@ impl Exec for Command {
                 {
                     runtime.request(
                         ServiceId::Farcasterd,
-                        Request::SweepMoneroAddress(SweepMoneroAddress {
+                        Request::SweepAddress(SweepAddressAddendum::Monero(SweepMoneroAddress {
                             source_spend_key: spend,
                             source_view_key: view,
                             destination_address,
                             minimum_balance: monero::Amount::from_pico(0),
-                        }),
+                        })),
                     )?;
                     runtime.report_response_or_fail()?;
                 } else {

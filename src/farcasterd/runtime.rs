@@ -476,45 +476,6 @@ impl Runtime {
                 };
             }
 
-            Request::RevokeOffer(public_offer) => {
-                debug!("attempting to revoke {}", public_offer);
-                if self.public_offers.remove(&public_offer) {
-                    info!("Revoked offer {}", public_offer);
-                    endpoints.send_to(
-                        ServiceBus::Ctl,
-                        ServiceId::Farcasterd,
-                        source,
-                        Request::String("Successfully revoked offer.".to_string()),
-                    )?;
-                } else {
-                    error!("failed to revoke {}", public_offer);
-                    endpoints.send_to(
-                        ServiceBus::Ctl,
-                        ServiceId::Farcasterd,
-                        source,
-                        Request::Failure(Failure {
-                            code: FailureCode::Unknown,
-                            info: "Coulod not find to be revoked offer.".to_string(),
-                        }),
-                    )?;
-                }
-            }
-
-            Request::ListOffersSerialized => {
-                endpoints.send_to(
-                    ServiceBus::Ctl,
-                    ServiceId::Farcasterd, // source
-                    source,                // destination
-                    Request::OfferSerializedList(
-                        self.public_offers
-                            .iter()
-                            .filter(|k| self.open_offers_contains(k))
-                            .map(|public_offer| public_offer.to_string())
-                            .collect(),
-                    ),
-                )?;
-            }
-
             Request::ListListens => {
                 let listen_url: List<String> =
                     List::from_iter(self.listens.clone().iter().map(|listen| listen.to_string()));
@@ -892,9 +853,7 @@ impl Runtime {
         source: ServiceId,
     ) -> Result<Option<SyncerStateMachine>, Error> {
         match (req, source) {
-            (Request::SweepMoneroAddress(..), _) | (Request::SweepBitcoinAddress(..), _) => {
-                Ok(Some(SyncerStateMachine::Start))
-            }
+            (Request::SweepAddress(..), _) => Ok(Some(SyncerStateMachine::Start)),
             (Request::SyncerEvent(SyncerEvent::SweepSuccess(SweepSuccess { id, .. })), _) => {
                 Ok(self.syncer_state_machines.remove(&id))
             }
@@ -1049,7 +1008,7 @@ impl Runtime {
             Ok(Some(new_tsm))
         } else {
             info!(
-                "Trade state machine ended {:?} -> {}",
+                "Trade state machine ended {} -> {}",
                 tsm_display.red_bold(),
                 "End".to_string().bright_green_bold()
             );
