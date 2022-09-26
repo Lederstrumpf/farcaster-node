@@ -505,11 +505,12 @@ impl Runtime {
                     ServiceId::Farcasterd, // source
                     source,                // destination
                     Request::OfferSerializedList(
-                        self.public_offers
+                        self
+                            .trade_state_machines
                             .iter()
-                            .filter(|k| !self.consumed_offers_contains(k))
-                            .map(|public_offer| public_offer.to_string())
-                            .collect(),
+                            .filter_map(|tsm| tsm.open_offer())
+                            .map(|offer| offer.to_string())
+                            .collect()
                     ),
                 )?;
             }
