@@ -187,7 +187,7 @@ fn main() {
                     debug!("New connection from {}", remote_socket_addr);
 
                     // TODO: Support multithread mode
-                    debug!("Forking child process");
+                    debug!("Forking child process for remote {}", remote_socket_addr);
                     if let ForkResult::Child =
                         unsafe { fork().expect("Unable to fork child process") }
                     {
@@ -195,7 +195,10 @@ fn main() {
                             .set_read_timeout(Some(Duration::from_secs(30)))
                             .expect("Unable to set up timeout for TCP connection");
 
-                        debug!("Establishing session with the remote");
+                        debug!(
+                            "Establishing session with the remote {}",
+                            remote_socket_addr
+                        );
                         let session = session::BrontozaurSession::with(
                             stream,
                             local_node.private_key(),
