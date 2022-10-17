@@ -370,6 +370,15 @@ impl Runtime {
             }
         }
 
+        if message.is_protocol() {
+            let swap_id = message.swap_id();
+            info!(
+                "{} | Sent the {} protocol message",
+                swap_id.swap_id(),
+                message.label()
+            );
+        }
+
         Ok(())
     }
 
@@ -381,7 +390,7 @@ impl Runtime {
     ) -> Result<(), Error> {
         match request {
             Ctl::Terminate if source == ServiceId::Farcasterd => {
-                info!("Terminating {}", self.identity().bright_white_bold());
+                info!("Terminating {}", self.identity().label());
                 std::process::exit(0);
             }
 
@@ -539,14 +548,22 @@ impl Runtime {
                     request,
                 )?;
             }
+
             BusMsg::Msg(msg) => {
+                let swap_id = msg.swap_id();
+                info!(
+                    "{} | Received the {} protocol message",
+                    swap_id.swap_id(),
+                    msg.label()
+                );
                 endpoints.send_to(
                     ServiceBus::Msg,
                     self.identity(),
-                    ServiceId::Swap(msg.swap_id()),
+                    ServiceId::Swap(swap_id),
                     request,
                 )?;
             }
+
             other => {
                 error!("BusMsg is not supported by the BRIDGE interface");
                 dbg!(other);

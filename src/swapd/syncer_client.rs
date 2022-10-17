@@ -125,9 +125,9 @@ impl SyncerState {
         self.tasks.txids.insert(tx_label, txid);
         info!(
             "{} | Watching {} transaction ({})",
-            self.swap_id.bright_blue_italic(),
-            tx_label.bright_white_bold(),
-            txid.bright_yellow_italic()
+            self.swap_id.swap_id(),
+            tx_label.label(),
+            txid.tx_hash()
         );
         let task = Task::WatchTransaction(WatchTransaction {
             id,
@@ -146,9 +146,9 @@ impl SyncerState {
         self.tasks.watched_txs.insert(id, tx_label);
         info!(
             "{} | Watching {} transaction ({})",
-            self.swap_id.bright_blue_italic(),
-            tx_label.bright_white_bold(),
-            hex::encode(&hash).bright_yellow_italic(),
+            self.swap_id.swap_id(),
+            tx_label.label(),
+            hex::encode(&hash).tx_hash(),
         );
         debug!("Watching transaction {} with {}", hex::encode(&hash), id);
         let task = Task::WatchTransaction(WatchTransaction {
@@ -178,9 +178,9 @@ impl SyncerState {
         self.tasks.watched_addrs.insert(id, tx_label);
         info!(
             "{} | Watching address {} for {} transaction",
-            self.swap_id.bright_blue_italic(),
-            address.bright_blue_italic(),
-            tx_label.bright_white_bold(),
+            self.swap_id.swap_id(),
+            address.addr(),
+            tx_label.label(),
         );
         let addendum = BtcAddressAddendum {
             from_height,
@@ -240,9 +240,9 @@ impl SyncerState {
 
         info!(
             "{} | Watching {} on address {}",
-            self.swap_id.bright_blue_italic(),
-            tx_label.bright_white_bold(),
-            address
+            self.swap_id.swap_id(),
+            tx_label.label(),
+            address.addr(),
         );
 
         let watch_addr = WatchAddress {
@@ -352,36 +352,38 @@ impl SyncerState {
             {
                 info!(
                     "{} | Tx {} {} with {} {}",
-                    self.swap_id.bright_blue_italic(),
-                    txlabel.bright_white_bold(),
+                    self.swap_id.swap_id(),
+                    txlabel.label(),
                     "final".bright_green_bold(),
                     confirmations.unwrap().bright_green_bold(),
                     "confirmations".bright_green_bold()
                 );
                 self.tasks.final_txs.insert(*txlabel, true);
-            } else if self.tasks.final_txs.contains_key(txlabel) {
-                debug!(
-                    "{} | Tx {} {} with {} {}",
-                    self.swap_id.bright_blue_italic(),
-                    txlabel.bright_white_bold(),
-                    "final".bright_green_bold(),
-                    confirmations.unwrap().bright_green_bold(),
-                    "confirmations".bright_green_bold()
+            } else if let Some(finality) = self.tasks.final_txs.get(txlabel) {
+                info!(
+                    "{} | Tx {} {}",
+                    self.swap_id.swap_id(),
+                    txlabel.label(),
+                    if *finality {
+                        "final".bright_green_bold()
+                    } else {
+                        "non-final".red_bold()
+                    },
                 );
             } else {
                 match confirmations {
                     Some(0) => {
                         info!(
                             "{} | Tx {} on mempool but hasn't been mined",
-                            swapid.bright_blue_italic(),
-                            txlabel.bright_white_bold()
+                            swapid.swap_id(),
+                            txlabel.label()
                         );
                     }
                     Some(confs) => {
                         info!(
                             "{} | Tx {} mined with {} {}",
-                            swapid.bright_blue_italic(),
-                            txlabel.bright_white_bold(),
+                            swapid.swap_id(),
+                            txlabel.label(),
                             confs.bright_green_bold(),
                             "confirmations".bright_green_bold(),
                         )
@@ -389,8 +391,8 @@ impl SyncerState {
                     None => {
                         info!(
                             "{} | Tx {} not on the mempool",
-                            swapid.bright_blue_italic(),
-                            txlabel.bright_white_bold()
+                            swapid.swap_id(),
+                            txlabel.label()
                         );
                     }
                 }
@@ -433,17 +435,17 @@ impl SyncerState {
 pub fn log_tx_seen(swap_id: SwapId, txlabel: &TxLabel, txid: &Txid) {
     info!(
         "{} | {} transaction ({}) in mempool or blockchain, forward to walletd",
-        swap_id.bright_blue_italic(),
-        txlabel.bright_white_bold(),
-        txid.bright_yellow_italic(),
+        swap_id.swap_id(),
+        txlabel.label(),
+        txid.tx_hash(),
     );
 }
 
 pub fn log_tx_received(swap_id: SwapId, txlabel: TxLabel) {
     info!(
         "{} | {} transaction received from {}",
-        swap_id.bright_blue_italic(),
-        txlabel.bright_white_bold(),
-        ServiceId::Wallet
+        swap_id.swap_id(),
+        txlabel.label(),
+        ServiceId::Wallet.label(),
     );
 }

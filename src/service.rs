@@ -61,6 +61,11 @@ lazy_static! {
     StrictEncode,
     StrictDecode,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct ClientName([u8; 32]);
 
 impl Display for ClientName {
@@ -122,6 +127,11 @@ impl From<Opts> for ServiceConfig {
 
 /// Identifiers of daemons participating in LNP Node
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, From, StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub enum ServiceId {
     #[display("loopback")]
     Loopback,
@@ -507,8 +517,24 @@ pub trait LogStyle: ToString {
         self.to_string().bold().bright_white()
     }
 
+    // Typed log styles
+    // This is used to standardize color and fonts across the codebase
+    // ----------------
+
+    fn swap_id(&self) -> colored::ColoredString {
+        self.to_string().italic().bright_blue()
+    }
+
+    fn label(&self) -> colored::ColoredString {
+        self.to_string().bold().bright_white()
+    }
+
     fn addr(&self) -> colored::ColoredString {
         self.to_string().bold().bright_yellow()
+    }
+
+    fn tx_hash(&self) -> colored::ColoredString {
+        self.to_string().italic().bright_yellow()
     }
 
     fn err(&self) -> colored::ColoredString {
