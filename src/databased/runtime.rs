@@ -1,5 +1,4 @@
-use crate::walletd::runtime::{AliceState, BobState, Wallet};
-use crate::walletd::state::Wallet;
+use crate::walletd::state::{AliceState, BobState, Wallet};
 use farcaster_core::blockchain::Blockchain;
 use farcaster_core::swap::btcxmr::PublicOffer;
 use farcaster_core::swap::SwapId;
