@@ -464,7 +464,7 @@ impl esb::Handler<ServiceBus> for Runtime {
 
 impl Runtime {
     fn send_peer(&mut self, endpoints: &mut Endpoints, msg: PeerMsg) -> Result<(), Error> {
-        trace!("sending peer message {} to {}", msg, self.peer_service);
+        info!("{} | sending peer message {} to {}", self.swap_id.swap_id(), msg, self.peer_service);
         if let Err(error) = endpoints.send_to(
             ServiceBus::Msg,
             self.identity(),
@@ -575,7 +575,7 @@ impl Runtime {
                     && self.state.trade_role() == Some(TradeRole::Taker)
                     && self.state.remote_commit().is_none() =>
             {
-                trace!("received remote commitment");
+                info!("{} | received remote commitment", self.swap_id.swap_id());
                 self.state.t_sup_remote_commit(remote_commit.clone());
 
                 if self.state.swap_role() == SwapRole::Bob {
@@ -618,7 +618,7 @@ impl Runtime {
                 info!("RECEIVED REVEAL FROM WALLET: {}", self.state.swap_role());
                 // forward message to peer
                 self.send_peer(endpoints, PeerMsg::Reveal2(reveal))?;
-                trace!("sent reveal peer message to peerd");
+                info!("{} | sent reveal peer message to peerd", self.swap_id.swap_id());
                 // trigger state transition
                 let next_state = self.state.clone().sup_commit_to_reveal();
                 self.state_update(endpoints, next_state)?;
@@ -658,7 +658,7 @@ impl Runtime {
                 if let Ok(remote_params_candidate) =
                     remote_params_candidate2(&reveal, remote_commit)
                 {
-                    debug!("{:?} sets remote_params", self.state.swap_role());
+                    info!("{} | {:?} sets remote_params", self.swap_id.swap_id(), self.state.swap_role());
                     self.state.sup_remote_params(remote_params_candidate);
                 } else {
                     error!("Revealed remote params not preimage of commitment");
@@ -667,7 +667,7 @@ impl Runtime {
                 match self.state.swap_role() {
                     // As Alice always forward reveal to wallet
                     SwapRole::Alice => {
-                        info!("RECEIVED REVEAL AS ALICE");
+                        info!("{} | RECEIVED REVEAL AS ALICE", self.swap_id.swap_id());
                         debug!("Alice: forwarding reveal to wallet");
                         self.send_wallet(
                             ServiceBus::Msg,
@@ -676,7 +676,7 @@ impl Runtime {
                         )?
                     }
                     SwapRole::Bob => {
-                        info!("RECEIVED REVEAL AS BOB");
+                        info!("{} | RECEIVED REVEAL AS BOB", self.swap_id.swap_id());
 
                         if self.state.b_address().is_none() {
                             let msg = format!("FIXME: b_address is None, request {}", reveal);
@@ -1072,7 +1072,7 @@ impl Runtime {
                     && self.state.local_params().is_some() =>
             {
                 // checkpoint swap pre lock bob
-                debug!("{} | checkpointing bob pre lock swapd state", self.swap_id);
+                info!("{} | checkpointing bob pre lock swapd state", self.swap_id.swap_id());
                 if self.state.b_sup_checkpoint_pre_lock() {
                     checkpoint_send(
                         endpoints,
@@ -1115,7 +1115,7 @@ impl Runtime {
                         )?;
                     }
                 }
-                trace!("sending peer CoreArbitratingSetup msg: {}", &core_arb_setup);
+                info!("{} | sending peer CoreArbitratingSetup msg: {}", self.swap_id.swap_id(), &core_arb_setup);
                 self.send_peer(endpoints, PeerMsg::CoreArbitratingSetup(core_arb_setup))?;
                 let next_state = State::Bob(BobState::CorearbB {
                     received_refund_procedure_signatures: false,
@@ -1174,9 +1174,9 @@ impl Runtime {
                     && self.state.local_params().is_some() =>
             {
                 // checkpoint alice pre lock bob
-                debug!(
+                info!(
                     "{} | checkpointing alice pre lock swapd state",
-                    self.swap_id
+                    self.swap_id.swap_id()
                 );
                 if self.state.a_sup_checkpoint_pre_lock() {
                     checkpoint_send(
@@ -1235,7 +1235,7 @@ impl Runtime {
                     && !self.syncer_state.tasks.txids.contains_key(&TxLabel::Buy) =>
             {
                 // checkpoint bob pre buy
-                debug!("{} | checkpointing bob pre buy swapd state", self.swap_id);
+                info!("{} | checkpointing bob pre buy swapd state", self.swap_id.swap_id());
                 if self.state.b_sup_checkpoint_pre_buy() {
                     checkpoint_send(
                         endpoints,
@@ -1302,7 +1302,7 @@ impl Runtime {
                 }
 
                 // checkpoint swap alice pre buy
-                debug!("{} | checkpointing alice pre buy swapd state", self.swap_id);
+                info!("{} | checkpointing alice pre buy swapd state", self.swap_id.swap_id());
                 if self.state.a_sup_checkpoint_pre_buy() {
                     checkpoint_send(
                         endpoints,
