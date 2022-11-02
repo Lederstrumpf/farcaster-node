@@ -198,13 +198,13 @@ impl PeerReceiverRuntime {
         &mut self,
         req: <Unmarshaller<PeerMsg> as Unmarshall>::Data,
     ) -> Result<(), Error> {
-        debug!("Forwarding FWP message over BRIDGE interface to the runtime");
+        debug!("{} | Forwarding FWP message over BRIDGE interface to the runtime", self.internal_identity);
         if let Err(err) = self.bridge.send_to(
             ServiceBus::Bridge,
             self.internal_identity.clone(),
             BusMsg::P2p((&*req).clone()),
         ) {
-            error!("Error sending over bridge: {}", err);
+            error!("{} | Error sending over bridge: {}", self.internal_identity, err);
             Err(err.into())
         } else {
             Ok(())
@@ -219,7 +219,8 @@ impl peer::Handler<PeerMsg> for PeerReceiverRuntime {
         &mut self,
         message: <Unmarshaller<PeerMsg> as Unmarshall>::Data,
     ) -> Result<(), Self::Error> {
-        trace!("FWP message details: {:?}", message);
+        debug!("{} FWP message details: {}", self.internal_identity, message);
+        trace!("{} FWP message details: {:?}", self.internal_identity, message);
         if let PeerMsg::Pong(_) = *Arc::clone(&message) {
             if self.awaiting_pong {
                 self.awaiting_pong = false;
@@ -231,7 +232,8 @@ impl peer::Handler<PeerMsg> for PeerReceiverRuntime {
             self.send_over_bridge(message)?;
         } else {
             debug!(
-                "Ignoring message {}, did not match peer receiving whitelist",
+                "{} | Ignoring message {}, did not match peer receiving whitelist",
+                self.internal_identity,
                 message
             );
         }
@@ -239,13 +241,14 @@ impl peer::Handler<PeerMsg> for PeerReceiverRuntime {
     }
 
     fn handle_err(&mut self, err: Self::Error) -> Result<(), Self::Error> {
-        debug!("Underlying peer interface requested to handle {}", err);
+        debug!("{} | Underlying peer interface requested to handle {}", self.internal_identity, err);
         match err {
             Error::Peer(presentation::Error::Transport(transport::Error::TimedOut)) => {
                 trace!("Time to ping the remote peer");
                 if self.awaiting_pong {
                     error!(
-                        "The ping has failed, probably the connection is down. Will shutdown the receiver runtime."
+                        "{} | The ping has failed, probably the connection is down. Will shutdown the receiver runtime.",
+                        self.internal_identity
                     );
                     self.send_over_bridge(Arc::new(PeerMsg::PeerReceiverRuntimeShutdown))?;
                     return Err(Error::NotResponding);
@@ -261,7 +264,8 @@ impl peer::Handler<PeerMsg> for PeerReceiverRuntime {
             // handled, will result in a broken peerd state)
             _ => {
                 error!(
-                    "The remote connection is broken; notifying peerd that its receiver runtime is halting: {}",
+                    "{} | The remote connection is broken; notifying peerd that its receiver runtime is halting: {}",
+                    self.internal_identity,
                     err
                 );
                 self.send_over_bridge(Arc::new(PeerMsg::PeerReceiverRuntimeShutdown))?;
