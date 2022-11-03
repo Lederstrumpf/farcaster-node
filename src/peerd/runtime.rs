@@ -531,7 +531,7 @@ impl Runtime {
             }
 
             BusMsg::P2p(PeerMsg::PeerReceiverRuntimeShutdown) => {
-                warn!("Exiting peerd receiver runtime");
+                warn!("{} | Exiting peerd receiver runtime", self.identity());
                 // If this is the listener-forked peerd, i.e. the maker's peerd, terminate it.
                 if self.forked_from_listener {
                     endpoints.send_to(

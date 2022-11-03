@@ -22,6 +22,7 @@ pub trait StateMachineExecutor<
         let event = Event::with(endpoints, runtime.identity(), source, request);
         let sm_display = sm.to_string();
         let sm_name = sm.name();
+        trace!("sm {} processing request {}", sm_name, request);
         if let Some(new_sm) = sm.next(event, runtime)? {
             let new_sm_display = new_sm.to_string();
             // relegate state transitions staying the same to debug
