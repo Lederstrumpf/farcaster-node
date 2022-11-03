@@ -550,8 +550,8 @@ impl Runtime {
             }
 
             // swap initiation message
-            BusMsg::P2p(PeerMsg::TakerCommit(_)) => {
-                let swap_id = request.swap_id();
+            BusMsg::P2p(PeerMsg::TakerCommit(swap)) => {
+                let swap_id = swap.swap_id();
                 info!(
                     "{} | Received the {} protocol message",
                     swap_id.swap_id(),
