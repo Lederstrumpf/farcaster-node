@@ -21,7 +21,6 @@ use std::str::FromStr;
 
 use bitcoin::hashes::hex::{self, ToHex};
 use colored::Colorize;
-use internet2::addr::NodeId;
 use internet2::{
     addr::{NodeAddr, ServiceAddr},
     zeromq,
@@ -139,8 +138,9 @@ pub enum ServiceId {
     #[display("farcasterd")]
     Farcasterd,
 
-    #[display("peerd<{0} {1}>")]
-    Peer(u128, NodeAddr),
+    #[display("peerd<{0}>")]
+    #[from]
+    Peer(NodeAddr),
 
     #[display("swap<{0}>")]
     #[from]
@@ -176,26 +176,6 @@ impl ServiceId {
     pub fn client() -> ServiceId {
         use bitcoin::secp256k1::rand;
         ServiceId::Client(rand::random())
-    }
-
-    pub fn node_id(&self) -> Option<NodeId> {
-        if let ServiceId::Peer(_, addr) = self {
-            Some(addr.id)
-        } else {
-            None
-        }
-    }
-
-    pub fn node_addr(&self) -> Option<NodeAddr> {
-        if let ServiceId::Peer(_, addr) = self {
-            Some(addr.clone())
-        } else {
-            None
-        }
-    }
-
-    pub fn dummy_peer_service_id(node_addr: NodeAddr) -> ServiceId {
-        ServiceId::Peer(0, node_addr)
     }
 }
 
