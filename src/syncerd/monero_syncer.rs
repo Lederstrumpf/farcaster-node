@@ -823,6 +823,7 @@ impl Synclet for MoneroSyncer {
                 };
                 debug!("monero syncer servers: {:?}", syncer_servers);
                 let wallet_dir = opts.monero_wallet_dir_path.clone().map(PathBuf::from);
+                debug!("monero wallet dir: {:?}", wallet_dir);
 
                 let _handle = std::thread::spawn(move || {
                     use tokio::runtime::Builder;
