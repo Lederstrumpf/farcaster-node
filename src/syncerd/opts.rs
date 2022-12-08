@@ -60,7 +60,7 @@ pub struct Opts {
 
     /// Wallet directory use by the monero-wallet-rpc
     #[clap(long)]
-    pub monero_wallet_dir_path: Option<String>,
+    pub monero_wallet_dir: Option<String>,
 }
 
 impl Opts {
