@@ -338,9 +338,12 @@ async fn sweep_address(
                         raw_path.to_string() + &sweep_wallet_filename + ".keys",
                     ))
                 {
-                    warn!("Failed to clean sweep wallet data after successful sweep. {}. The path used for the wallet directory is probably malformed", error);
+                    error!("Failed to clean sweep wallet data after successful sweep. {}. The path used for the wallet directory ({}) is probably malformed", error, raw_path.to_string());
                 } else {
-                    info!("Successfully removed sweep wallet data after completed sweep.");
+                    info!(
+                        "Successfully removed sweep wallet data {} after completed sweep.",
+                        sweep_wallet_filename
+                    );
                 }
 
                 if let Err(error) = fs::remove_file(raw_path.to_string() + &watch_wallet_filename)
@@ -351,9 +354,12 @@ async fn sweep_address(
                         raw_path.to_string() + &watch_wallet_filename + ".keys",
                     ))
                 {
-                    debug!("Failed to clean watch-only wallet data after sweep. {}. The path used for the wallet directory is probably malformed", error);
+                    error!("Failed to clean watch-only wallet data after sweep. {}. The path used for the wallet directory ({}) is probably malformed", error, raw_path.to_string());
                 } else {
-                    debug!("Successfully removed watch-only wallet data after completed sweep");
+                    info!(
+                        "Successfully removed watch-only wallet data {} after completed sweep",
+                        watch_wallet_filename
+                    );
                 }
             } else {
                 warn!("No associated wallet data cleaned up after sweep. The path used for the wallet directory is probably malformed");
